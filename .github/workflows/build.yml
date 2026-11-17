@@ -1,37 +1,21 @@
-# .github/workflows/build.yml — builds RiseInsta.dylib + .deb on every push.
-name: Build dylib
-
+name: Build standalone dylib
 on:
   push:
   workflow_dispatch:
-
+permissions:
+  contents: read
 jobs:
   build:
-    runs-on: macos-14
+    runs-on: macos-15
+    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Install build tools
-        run: |
-          brew install ldid make xz dpkg
-          echo "$(brew --prefix make)/libexec/gnubin" >> "$GITHUB_PATH"
-
-      - name: Install Theos
-        run: |
-          git clone --recursive --depth=1 https://github.com/theos/theos.git "$HOME/theos"
-          echo "THEOS=$HOME/theos" >> "$GITHUB_ENV"
-
-      - name: Build
-        run: make package FINALPACKAGE=1
-
-      - name: Collect output
-        run: |
-          mkdir -p out
-          cp packages/*.deb out/ 2>/dev/null || true
-          find .theos/obj -name "RiseInsta.dylib" -exec cp {} out/ \; 2>/dev/null || true
-          ls -la out
-
-      - uses: actions/upload-artifact@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - name: Check runtime hook engine on macOS
+        run: bash scripts/test-runtime.sh
+      - name: Build and verify standalone arm64 dylib
+        run: bash scripts/build.sh
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: RiseInsta
+          name: RiseInsta-standalone-arm64
           path: out/*
+          if-no-files-found: error

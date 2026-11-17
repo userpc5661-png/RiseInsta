@@ -8,13 +8,29 @@ static NSURL *RIURL(id value) {
     return url.host.length && [@[@"https",@"http"] containsObject:url.scheme.lowercaseString] ? url : nil;
 }
 static NSURL *RICandidateURL(id value) { return RIURL(value) ?: RIURL(RIField(value,@"url")) ?: RIURL(RIField(value,@"URL")); }
+static double RIDimension(id object,NSString *key) {
+    id value=RIField(object,key);
+    if ([value respondsToSelector:@selector(doubleValue)]) return [value doubleValue];
+    SEL selector=NSSelectorFromString(key);
+    if (![object respondsToSelector:selector]) return 0;
+    NSMethodSignature *sig=[object methodSignatureForSelector:selector];
+    if (sig.numberOfArguments!=2) return 0;
+    switch (sig.methodReturnType[0]) {
+        case 'q': return ((NSInteger (*)(id,SEL))objc_msgSend)(object,selector);
+        case 'Q': return ((NSUInteger (*)(id,SEL))objc_msgSend)(object,selector);
+        case 'i': return ((int (*)(id,SEL))objc_msgSend)(object,selector);
+        case 'I': return ((unsigned (*)(id,SEL))objc_msgSend)(object,selector);
+        case 'f': return ((float (*)(id,SEL))objc_msgSend)(object,selector);
+        case 'd': return ((double (*)(id,SEL))objc_msgSend)(object,selector);
+        default: return 0;
+    }
+}
 static NSURL *RIBestURL(id versions) {
     if (![versions isKindOfClass:NSArray.class]) return RICandidateURL(versions);
     NSURL *best=nil; double score=-1;
     for (id candidate in versions) {
         NSURL *url=RICandidateURL(candidate); if (!url) continue;
-        id w=RIField(candidate,@"width"), h=RIField(candidate,@"height");
-        double area=([w respondsToSelector:@selector(doubleValue)] && [h respondsToSelector:@selector(doubleValue)]) ? [w doubleValue]*[h doubleValue] : 0;
+        double area=RIDimension(candidate,@"width")*RIDimension(candidate,@"height");
         if (!best || area>score) { best=url; score=area; }
     } return best;
 }

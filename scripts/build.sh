@@ -9,10 +9,11 @@ xcrun --sdk iphoneos clang -arch arm64 -isysroot "$sdk" \
   -dynamiclib -Wl,-install_name,@rpath/RiseInsta.dylib \
   RIRuntime.m RICommon.m RIDownloader.m RIMedia.m Menu.m Tweak.m \
   -framework Foundation -framework UIKit -framework Photos \
-  -framework UniformTypeIdentifiers -o out/RiseInsta.dylib
+  -framework UniformTypeIdentifiers -framework QuartzCore -framework CoreGraphics -o out/RiseInsta.dylib
 codesign --force --sign - out/RiseInsta.dylib
 codesign --verify --verbose out/RiseInsta.dylib
 python3 scripts/verify_macho.py out/RiseInsta.dylib
+python3 scripts/verify_signature.py out/RiseInsta.dylib
 xcrun --version > out/toolchain.txt
 xcrun --sdk iphoneos --show-sdk-version >> out/toolchain.txt
 xcrun --sdk iphoneos clang --version >> out/toolchain.txt

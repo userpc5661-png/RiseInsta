@@ -29,6 +29,14 @@ bash scripts/test-runtime.sh
 bash scripts/build.sh
 ```
 
+بديل Windows، استُخدم فعليًا لبناء المرشح: Clang/LLD 19.0.1 الموجودان في Android NDK 28.2.13676358 مع iPhoneOS 16.5 SDK من مستودع `theos/sdks`. السكربت يصحح نهايات أسطر ملفات TAPI داخل نسخة SDK عند الحاجة ثم يترجم ويربط ويضيف توقيع ad-hoc ويفحص صفحات التوقيع.
+
+```powershell
+python scripts/build_windows.py --llvm-bin "C:/path/to/llvm/bin" --sdk "C:/path/to/iPhoneOS16.5.sdk"
+```
+
+استخدم مسار `clang.exe` و`ld.lld.exe` الموجودين لديك. لا حاجة إلى تشغيل WSL. تُسجّل نسخة المترجم والرابط ومعرّف commit لمصدر SDK في `out/toolchain.json`، ويضيف فحص التوقيع `out/RiseInsta.signature.json`.
+
 النواتج: `out/RiseInsta.dylib` و`out/RiseInsta.verification.json` و`out/SHA256SUMS` و`out/toolchain.txt`.
 
 GitHub Actions يبنيها مع push، ويُظهر أي فشل بدل تجاهله. اختبار macOS يتحقق من رفض ABI غير المطابق، وعدم تعديل دوال الكلاس الأب، وتمرير الاستدعاء الأصلي وتبديل بوابة التفضيلات. فحص Mach-O يتحقق من arm64 وiOS 16 ومن اقتصار الاعتمادات على مكتبات النظام. هذه فحوص بناء، وليست اختبارًا على إنستغرام.

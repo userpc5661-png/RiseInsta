@@ -1,11 +1,13 @@
 #import "../RIRuntime.h"
 #include <assert.h>
 @interface Parent : NSObject
++ (id)builderWithData:(id)data metadata:(id)metadata;
 - (BOOL)enabled;
 - (id)echo:(id)value;
 - (void)typing:(BOOL)active thread:(id)thread metadata:(id)metadata type:(NSInteger)type;
 @end
 @implementation Parent
++ (id)builderWithData:(id)data metadata:(id)metadata { return data; }
 - (BOOL)enabled { return YES; }
 - (id)echo:(id)value { return value; }
 - (void)typing:(BOOL)active thread:(id)thread metadata:(id)metadata type:(NSInteger)type {}
@@ -33,6 +35,14 @@ int main(void) {
         IMP eo=method_getImplementation(em);
         RIOverrideMethod(Child.class,echo,em,imp_implementationWithBlock(^id(id obj,id value){ return ((id (*)(id,SEL,id))eo)(obj,echo,value); }));
         assert([[[Child new] echo:@"forwarded"] isEqual:@"forwarded"]);
+        Class meta=object_getClass(Child.class); SEL builder=@selector(builderWithData:metadata:);
+        Method bm=RICompatibleMethod(meta,builder,@"@",@[@"@",@"@"]); assert(bm);
+        IMP bo=method_getImplementation(bm);
+        __block BOOL seenGate=YES;
+        RIOverrideMethod(meta,builder,bm,imp_implementationWithBlock(^id(id obj,id data,id metadata){ return seenGate ? nil : ((id (*)(id,SEL,id,id))bo)(obj,builder,data,metadata); }));
+        assert([Child builderWithData:@"child" metadata:nil]==nil);
+        assert([[Parent builderWithData:@"parent" metadata:nil] isEqual:@"parent"]);
+        seenGate=NO; assert([[Child builderWithData:@"child" metadata:nil] isEqual:@"child"]);
         puts("PASS: ABI rejection, inherited isolation, pref gate and original forwarding");
     } return 0;
 }

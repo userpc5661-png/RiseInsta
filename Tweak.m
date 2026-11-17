@@ -19,13 +19,15 @@ static void RIReplace(Class cls,SEL sel,Method method,IMP replacement,NSString *
 }
 static void RIGhost(NSDictionary *target) {
     NSString *name=target[@"class"], *selector=target[@"sel"], *shape=target[@"shape"], *pref=target[@"pref"];
-    NSString *key=[NSString stringWithFormat:@"%@/%@",name,selector];
+    BOOL meta=[target[@"meta"] boolValue];
+    NSString *key=[NSString stringWithFormat:@"%@%@/%@",meta ? @"+" : @"-",name,selector];
     if (RIAlready(key)) return;
     Class cls=NSClassFromString(name); SEL sel=NSSelectorFromString(selector);
     if (!cls) { RIStatus(key,@"class missing"); return; }
-    NSString *ret=[shape isEqualToString:@"bool0"] ? @"Bc" : @"v";
+    if (meta) cls=object_getClass(cls);
+    NSString *ret=[shape isEqualToString:@"bool0"] ? @"Bc" : ([shape isEqualToString:@"object2"] ? @"@" : @"v");
     NSArray *args=@[];
-    if ([shape isEqualToString:@"void2"]) args=@[@"@",@"@"];
+    if ([shape isEqualToString:@"void2"] || [shape isEqualToString:@"object2"]) args=@[@"@",@"@"];
     else if ([shape isEqualToString:@"void3"]) args=@[@"@",@"@",@"@"];
     else if ([shape isEqualToString:@"typing4"]) args=@[@"Bc",@"@",@"@",@"qQ"];
     Method method=RICompatibleMethod(cls,sel,ret,args);
@@ -34,6 +36,9 @@ static void RIGhost(NSDictionary *target) {
     if ([shape isEqualToString:@"bool0"]) replacement=imp_implementationWithBlock(^BOOL(id object){
         return RIPref(pref,NO) ? NO : ((BOOL (*)(id,SEL))original)(object,sel);
     });
+    else if ([shape isEqualToString:@"object2"]) replacement=imp_implementationWithBlock(^id(id object,id a,id b){
+        return RIPref(pref,NO) ? nil : ((id (*)(id,SEL,id,id))original)(object,sel,a,b);
+    });
     else if ([shape isEqualToString:@"void2"]) replacement=imp_implementationWithBlock(^(id object,id a,id b){
         if (!RIPref(pref,NO)) ((void (*)(id,SEL,id,id))original)(object,sel,a,b);
     });
@@ -41,12 +46,11 @@ static void RIGhost(NSDictionary *target) {
         if (!RIPref(pref,NO)) ((void (*)(id,SEL,id,id,id))original)(object,sel,a,b,c);
     });
     else if ([shape isEqualToString:@"typing4"]) replacement=imp_implementationWithBlock(^(id object,BOOL active,id a,id b,NSInteger type){
-        if (!RIPref(pref,NO)) ((void (*)(id,SEL,BOOL,id,id,NSInteger))original)(object,sel,active,a,b,type);
+        if (!RIPref(pref,NO) || !active) ((void (*)(id,SEL,BOOL,id,id,NSInteger))original)(object,sel,active,a,b,type);
     });
     if (replacement) RIReplace(cls,sel,method,replacement,key);
 }
 static BOOL RIIsAd(id object) {
-    for (NSString *predicate in RIAdPredicates()) if (RIBool(object,predicate)) return YES;
     Class adClass=NSClassFromString(RI_AD_CLASS); return adClass && [object isKindOfClass:adClass];
 }
 static void RIFeed(void) {

@@ -1,4 +1,5 @@
 #import "RICommon.h"
+#import <QuartzCore/QuartzCore.h>
 
 @interface RISettingsController : UITableViewController
 @end

@@ -5,6 +5,7 @@
 static inline NSArray<NSDictionary *> *RIGhostTargets(void) {
     return @[
         @{@"class":@"IGDirectThreadViewListAdapterDataSource",@"sel":@"shouldUpdateLastSeenMessage",@"shape":@"bool0",@"pref":@"ghost_seen"},
+        @{@"class":@"IGDirectItemSeenMutationBuilder",@"sel":@"builderWithData:metadata:",@"shape":@"object2",@"meta":@YES,@"pref":@"ghost_seen"},
         @{@"class":@"IGStoryViewerItemSeenReporter",@"sel":@"reportSeenItem:sectionController:",@"shape":@"void2",@"pref":@"ghost_story"},
         @{@"class":@"IGStoryViewerViewController",@"sel":@"fullscreenSectionController:didMarkItemAsSeen:",@"shape":@"void2",@"pref":@"ghost_story"},
         @{@"class":@"IGStoryViewerItemSeenHandler",@"sel":@"handleItem:sectionController:focusedModelItem:",@"shape":@"void3",@"pref":@"ghost_story"},
@@ -19,7 +20,6 @@ static inline NSArray<NSString *> *RIMediaViewClasses(void) {
 static inline NSArray<NSString *> *RIModelGetters(void) {
     return @[@"media",@"item",@"model",@"viewModel",@"currentStoryItem",@"user"];
 }
-static inline NSArray<NSString *> *RIAdPredicates(void) { return @[@"isSponsored",@"isAd",@"isAdItem"]; }
 #define RI_FEED_CLASS @"IGMainFeedListAdapterDataSource"
 #define RI_FEED_SELECTOR @"objectsForListAdapter:"
 #define RI_AD_CLASS @"IGAdItem"

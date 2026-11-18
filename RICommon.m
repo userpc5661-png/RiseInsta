@@ -26,7 +26,7 @@ NSArray<NSDictionary *> *RIFeatures(void) {
             @{@"key":RI_GHOST_TYPING,@"title":@"إخفاء مؤشر الكتابة",@"detail":@"منع إرسال مؤشر الكتابة عبر المسارات المتاحة",@"default":@NO},
             @{@"key":RI_GHOST_STORY,@"title":@"إخفاء مشاهدة القصص",@"detail":@"التوافق يعتمد على إصدار إنستغرام؛ اختبر بحساب ثانٍ",@"default":@NO},
             @{@"key":RI_HIDE_FEED_ADS,@"title":@"إخفاء الإعلانات",@"detail":@"مسارات الخلاصة والقصص والريلز المرصودة في Beegram، عند توفرها",@"default":@NO},
-            @{@"key":RI_DOWNLOAD,@"title":@"قائمة الوسائط",@"detail":@"اضغط مطولًا بإصبعين على الوسائط للتحميل أو النسخ",@"default":@YES},
+            @{@"key":RI_DOWNLOAD,@"title":@"قائمة الوسائط",@"detail":@"ضغطة مطولة بإصبع واحد على القصة، وبإصبعين على بقية الوسائط",@"default":@YES},
             @{@"key":RI_SAVE_TO_PHOTOS,@"title":@"حفظ في الصور",@"detail":@"عند تعطيله تظهر نافذة مشاركة الملف",@"default":@YES},
             @{@"key":@"floating_settings",@"title":@"زر الإعدادات العائم",@"detail":@"يمكن فتح الإعدادات أيضًا بالضغط المطول بثلاثة أصابع",@"default":@YES}
         ];

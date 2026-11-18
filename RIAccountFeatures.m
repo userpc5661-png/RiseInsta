@@ -64,6 +64,7 @@ static NSArray<NSDictionary *> *RIAccountFeatureCatalog(void) {
 @property(nonatomic,strong) UISegmentedControl *filter;
 @property(nonatomic,copy) NSString *query;
 @property(nonatomic) NSInteger filterIndex;
+@property(nonatomic,strong) UILabel *scanSummary;
 @end
 
 @implementation RIAccountFeaturesController
@@ -79,13 +80,58 @@ static NSArray<NSDictionary *> *RIAccountFeatureCatalog(void) {
     }
     self.tableView=[[UITableView alloc] initWithFrame:CGRectZero style:UITableViewStyleGrouped]; self.tableView.translatesAutoresizingMaskIntoConstraints=NO; self.tableView.backgroundColor=self.view.backgroundColor; self.tableView.dataSource=self; self.tableView.delegate=self; self.tableView.separatorStyle=UITableViewCellSeparatorStyleNone; self.tableView.contentInset=UIEdgeInsetsMake(-18,0,16,0); [self.view addSubview:self.tableView];
     [NSLayoutConstraint activateConstraints:@[[self.tableView.topAnchor constraintEqualToAnchor:self.view.safeAreaLayoutGuide.topAnchor],[self.tableView.leadingAnchor constraintEqualToAnchor:self.view.leadingAnchor],[self.tableView.trailingAnchor constraintEqualToAnchor:self.view.trailingAnchor],[self.tableView.bottomAnchor constraintEqualToAnchor:self.view.bottomAnchor]]];
-    UIView *header=[[UIView alloc] initWithFrame:CGRectMake(0,0,self.view.bounds.size.width,142)]; header.backgroundColor=self.view.backgroundColor;
+    UIView *header=[[UIView alloc] initWithFrame:CGRectMake(0,0,self.view.bounds.size.width,194)]; header.backgroundColor=self.view.backgroundColor;
     UILabel *summary=[UILabel new]; summary.translatesAutoresizingMaskIntoConstraints=NO; summary.text=@"حالة الميزات لهذا الحساب"; summary.textColor=UIColor.whiteColor; summary.font=[UIFont systemFontOfSize:15 weight:UIFontWeightSemibold]; summary.textAlignment=NSTextAlignmentRight; [header addSubview:summary];
     UILabel *count=[UILabel new]; count.translatesAutoresizingMaskIntoConstraints=NO; count.text=@"الكتالوج المحلي • حالة الخادم غير متاحة"; count.textColor=RIFeatureColor(0x9ba2a3); count.font=[UIFont systemFontOfSize:12]; count.textAlignment=NSTextAlignmentRight; [header addSubview:count];
     self.filter=[[UISegmentedControl alloc] initWithItems:@[@"الكل",@"موصولة",@"غير موصولة",@"محلية"]]; self.filter.translatesAutoresizingMaskIntoConstraints=NO; self.filter.selectedSegmentIndex=0; [self.filter addTarget:self action:@selector(filterChanged:) forControlEvents:UIControlEventValueChanged]; [header addSubview:self.filter];
     self.searchBar=[UISearchBar new]; self.searchBar.translatesAutoresizingMaskIntoConstraints=NO; self.searchBar.delegate=self; self.searchBar.placeholder=@"البحث في الميزات"; self.searchBar.searchBarStyle=UISearchBarStyleMinimal; self.searchBar.tintColor=UIColor.whiteColor; [header addSubview:self.searchBar];
     [NSLayoutConstraint activateConstraints:@[[summary.topAnchor constraintEqualToAnchor:header.topAnchor constant:12],[summary.trailingAnchor constraintEqualToAnchor:header.trailingAnchor constant:-18],[summary.leadingAnchor constraintEqualToAnchor:header.leadingAnchor constant:18],[count.topAnchor constraintEqualToAnchor:summary.bottomAnchor constant:5],[count.trailingAnchor constraintEqualToAnchor:summary.trailingAnchor],[count.leadingAnchor constraintEqualToAnchor:summary.leadingAnchor],[self.filter.topAnchor constraintEqualToAnchor:count.bottomAnchor constant:10],[self.filter.leadingAnchor constraintEqualToAnchor:header.leadingAnchor constant:14],[self.filter.trailingAnchor constraintEqualToAnchor:header.trailingAnchor constant:-14],[self.searchBar.topAnchor constraintEqualToAnchor:self.filter.bottomAnchor constant:4],[self.searchBar.leadingAnchor constraintEqualToAnchor:header.leadingAnchor constant:4],[self.searchBar.trailingAnchor constraintEqualToAnchor:header.trailingAnchor constant:-4],[self.searchBar.heightAnchor constraintEqualToConstant:48]]];
+    UIButton *scan=[UIButton buttonWithType:UIButtonTypeSystem];
+    scan.translatesAutoresizingMaskIntoConstraints=NO;
+    [scan setTitle:@"فحص المميزات المحلية وإعادة التحقق" forState:UIControlStateNormal];
+    scan.titleLabel.font=[UIFont systemFontOfSize:14 weight:UIFontWeightSemibold];
+    scan.backgroundColor=RIFeatureColor(0x26323a);
+    scan.tintColor=UIColor.whiteColor;
+    scan.layer.cornerRadius=10;
+    [scan addTarget:self action:@selector(scanLocalFeatures) forControlEvents:UIControlEventTouchUpInside];
+    [header addSubview:scan];
+    [NSLayoutConstraint activateConstraints:@[
+        [scan.topAnchor constraintEqualToAnchor:self.searchBar.bottomAnchor constant:4],
+        [scan.leadingAnchor constraintEqualToAnchor:header.leadingAnchor constant:14],
+        [scan.trailingAnchor constraintEqualToAnchor:header.trailingAnchor constant:-14],
+        [scan.heightAnchor constraintEqualToConstant:40]
+    ]];
+    [self refreshScanSummary];
     self.tableView.tableHeaderView=header;
+}
+- (void)refreshScanSummary {
+    NSUInteger total=0, local=0, enabled=0;
+    for (NSDictionary *section in RIAccountFeatureCatalog()) {
+        for (NSDictionary *item in section[@"items"]) {
+            total++;
+            NSString *pref=item[@"pref"];
+            if (!pref) continue;
+            local++;
+            if (RIPref(pref,[pref isEqualToString:@"download"])) enabled++;
+        }
+    }
+    self.scanSummary.text=[NSString stringWithFormat:@"%lu ميزة في الكتالوج • %lu مفاتيح محلية • %lu مفعلة محليًا • حالة الخادم غير معروفة",
+                           (unsigned long)total,(unsigned long)local,(unsigned long)enabled];
+}
+- (void)scanLocalFeatures {
+    [self refreshScanSummary];
+    NSDictionary *hookStatus=RIHookStatus();
+    NSUInteger installed=0;
+    for (NSDictionary *entry in hookStatus.allValues)
+        if ([entry[@"state"] hasPrefix:@"installed"]) installed++;
+    NSString *message=[NSString stringWithFormat:@"فُحصت إعدادات RiseInsta المحلية. عدد مسارات Hooks المثبتة بحسب التشخيص: %lu من %lu. هذا لا يكشف أهلية الحساب على خوادم إنستغرام، ولا يمنح ميزات تجريبية أو صلاحيات موظف.",(unsigned long)installed,(unsigned long)hookStatus.count];
+    UIAlertController *alert=[UIAlertController alertControllerWithTitle:@"نتيجة فحص المميزات المحلية" message:message preferredStyle:UIAlertControllerStyleAlert];
+    [alert addAction:[UIAlertAction actionWithTitle:@"نسخ تقرير التشخيص" style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
+        UIPasteboard.generalPasteboard.string=RIDiagnostics();
+    }]];
+    [alert addAction:[UIAlertAction actionWithTitle:@"إغلاق" style:UIAlertActionStyleCancel handler:nil]];
+    [self presentViewController:alert animated:YES completion:nil];
+    [self.tableView reloadData];
 }
 - (void)close { [self dismissViewControllerAnimated:YES completion:nil]; }
 - (void)filterChanged:(UISegmentedControl *)sender { self.filterIndex=sender.selectedSegmentIndex; [self.tableView reloadData]; }
@@ -127,6 +173,12 @@ static NSArray<NSDictionary *> *RIAccountFeatureCatalog(void) {
 void RIShowAccountFeatures(UIViewController *host) {
     dispatch_async(dispatch_get_main_queue(), ^{
         UIViewController *top=RITopController(host); if (!top) return;
-        RIAccountFeaturesController *root=[RIAccountFeaturesController new]; UINavigationController *nav=[[UINavigationController alloc] initWithRootViewController:root]; nav.modalPresentationStyle=UIModalPresentationFullScreen; nav.overrideUserInterfaceStyle=UIUserInterfaceStyleDark; [top presentViewController:nav animated:YES completion:nil];
+        RIAccountFeaturesController *root=[RIAccountFeaturesController new]; UINavigationController *nav=[[UINavigationController alloc] initWithRootViewController:root]; nav.modalPresentationStyle=UIModalPresentationPageSheet;
+        if (@available(iOS 15.0,*)) {
+            UISheetPresentationController *sheet=nav.sheetPresentationController;
+            sheet.detents=@[UISheetPresentationControllerDetent.largeDetent];
+            sheet.prefersGrabberVisible=YES;
+        }
+        nav.overrideUserInterfaceStyle=UIUserInterfaceStyleDark; [top presentViewController:nav animated:YES completion:nil];
     });
 }

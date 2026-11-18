@@ -294,8 +294,19 @@ void RIAttachMediaMenu(UIView *view) {
     if (button) { button.hidden=!RIPref(RI_DOWNLOAD,YES) || (post&&!RIPref(@"editor_post",YES)) || (reels&&!RIPref(@"editor_reels",YES));
         if(post) {
             UIView *parent=RIActionParent(view);
-            if (!parent) button.hidden=YES;
-            else { if (button.superview!=parent) { [button removeFromSuperview]; [parent addSubview:button]; } RILayoutPostActions(view,parent,button); }
+            if (!parent) {
+                // Keep a reliable fallback until the exact UFI structure is
+                // confirmed by an Instagram 456 view-hierarchy report.
+                if (button.superview!=view) { [button removeFromSuperview]; [view addSubview:button]; }
+                CGFloat z=36;
+                button.frame=CGRectMake(MAX(0,CGRectGetWidth(view.bounds)-z-6),2,z,z);
+                button.hidden=!RIPref(RI_DOWNLOAD,YES) || !RIPref(@"editor_post",YES);
+                button.tintColor=UIColor.whiteColor;
+                RILog(@"Post actions class layout not resolved; showing fallback download button");
+            } else {
+                if (button.superview!=parent) { [button removeFromSuperview]; [parent addSubview:button]; }
+                RILayoutPostActions(view,parent,button);
+            }
         }
         else if (reels) {
             CGRect heart=RIHeartFrameInRail(view); CGFloat z=RIBtnSize();

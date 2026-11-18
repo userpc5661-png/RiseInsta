@@ -1,4 +1,4 @@
-# RiseInsta 1.1.2 interface-inspector — standalone IPA candidate
+# RiseInsta 1.1.3 interface-inspector — standalone IPA candidate
 
 مكتبة arm64 مستقلة للحقن داخل Instagram IPA بتوقيع جانبي، بحد أدنى iOS 16.0. لا تحتاج إلى Theos أو Substrate أو جيلبريك. أُزيل مسار حزمة deb من هذه النسخة وفق بيئة التثبيت المطلوبة.
 

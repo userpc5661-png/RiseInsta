@@ -23,7 +23,7 @@ static NSString *RIControlActions(UIControl *control) {
 }
 
 static void RIAppendView(NSMutableString *report, UIView *view, UIWindow *window, NSString *path, NSUInteger depth, NSUInteger *budget) {
-    if (!view || !window || *budget>=700 || depth>45 || view.hidden || view.alpha<0.02 || view.window!=window) return;
+    if (!view || !window || *budget>=700 || depth>45 || view.hidden || view.alpha<0.02 || (view!=window && view.window!=window)) return;
     CGRect frame=[view convertRect:view.bounds toView:window];
     if (!CGRectIntersectsRect(frame,window.bounds) && view!=window) return;
     (*budget)++;

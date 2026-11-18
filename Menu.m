@@ -118,7 +118,7 @@ static NSArray<NSDictionary *> *RIMenuPages(void) {
 }
 - (void)viewDidLoad {
     [super viewDidLoad]; self.title=[self titleForPage]; self.navigationItem.rightBarButtonItem=[[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemDone target:self action:@selector(close)];
-    self.tableView.rowHeight=UITableViewAutomaticDimension; self.tableView.estimatedRowHeight=72; self.view.semanticContentAttribute=UISemanticContentAttributeForceRightToLeft;
+    self.tableView.rowHeight=UITableViewAutomaticDimension; self.tableView.estimatedRowHeight=56; self.view.semanticContentAttribute=UISemanticContentAttributeForceRightToLeft;
     self.view.backgroundColor=self.menuBackgroundColor; self.tableView.backgroundColor=self.menuBackgroundColor;
     self.tableView.separatorColor=[UIColor.separatorColor colorWithAlphaComponent:0.28]; self.tableView.separatorInset=UIEdgeInsetsMake(0,62,0,18); self.navigationController.navigationBar.tintColor=UIColor.labelColor;
     if (@available(iOS 13.0,*)) {
@@ -147,7 +147,7 @@ static NSArray<NSDictionary *> *RIMenuPages(void) {
     return @[@{@"info":@YES,@"title":@"إعدادات الواجهة",@"detail":@"ألوان الصفحة تتبع مظهر النظام الفاتح أو الداكن."}];
 }
 - (NSInteger)tableView:(UITableView *)t numberOfRowsInSection:(NSInteger)section { return self.rows.count; }
-- (NSString *)tableView:(UITableView *)t titleForHeaderInSection:(NSInteger)section { return [self.page isEqualToString:@"home"] ? @"اختر قسمًا" : nil; }
+- (NSString *)tableView:(UITableView *)t titleForHeaderInSection:(NSInteger)section { return nil; }
 - (NSString *)tableView:(UITableView *)t titleForFooterInSection:(NSInteger)section {
     if ([self.page isEqualToString:@"privacy"]) return @"مفتاح إخفاء القوائم لا يثبت وحده تحديث إعداد الحساب؛ تحقق من ظهور القوائم من حساب آخر.";
     if ([self.page isEqualToString:@"messages"] || [self.page isEqualToString:@"stories"]) return @"تعتمد فعالية مفاتيح الخصوصية على توافق مسارات إنستغرام؛ راجع تقرير التشخيص للتحقق من تركيبها.";
@@ -204,10 +204,73 @@ void RIShowSettings(UIViewController *host) {
         if (!background || CGColorGetAlpha(background.CGColor)<0.95) background=top.traitCollection.userInterfaceStyle==UIUserInterfaceStyleDark ? UIColor.blackColor : UIColor.whiteColor;
         if (@available(iOS 13.0,*)) background=[background resolvedColorWithTraitCollection:top.traitCollection];
         RISettingsController *root=[[RISettingsController alloc] initWithPage:@"home" backgroundColor:background];
-        UINavigationController *nav=[[UINavigationController alloc] initWithRootViewController:root]; nav.modalPresentationStyle=UIModalPresentationFullScreen;
+        UINavigationController *nav=[[UINavigationController alloc] initWithRootViewController:root];
+        nav.modalPresentationStyle=UIModalPresentationPageSheet;
+        if (@available(iOS 15.0,*)) {
+            UISheetPresentationController *sheet=nav.sheetPresentationController;
+            sheet.detents=@[UISheetPresentationControllerDetent.mediumDetent,UISheetPresentationControllerDetent.largeDetent];
+            sheet.prefersGrabberVisible=YES;
+            sheet.prefersScrollingExpandsWhenScrolledToEdge=YES;
+        }
         if (@available(iOS 13.0,*)) nav.overrideUserInterfaceStyle=top.traitCollection.userInterfaceStyle;
         [top presentViewController:nav animated:YES completion:nil];
     });
 }
 
-void RIInstallMenu(void) { /* RiseInsta opens only from the profile navigation entry. */ }
+// Temporary, unobtrusive entry point while the Instagram 456.0.0
+// profile navigation class is being mapped. Does not add an overlay button.
+@interface RIMenuGestureRelay : NSObject <UIGestureRecognizerDelegate>
+@end
+@implementation RIMenuGestureRelay
+- (BOOL)gestureRecognizer:(UIGestureRecognizer *)gesture
+        shouldRecognizeSimultaneouslyWithGestureRecognizer:(UIGestureRecognizer *)other {
+    return YES;
+}
+- (void)openOnHold:(UILongPressGestureRecognizer *)gesture {
+    if (gesture.state != UIGestureRecognizerStateBegan) return;
+    UIWindow *window=[gesture.view isKindOfClass:UIWindow.class] ? (UIWindow *)gesture.view : gesture.view.window;
+    if (window) RIShowSettings(window.rootViewController);
+}
+- (void)openOnTap:(UITapGestureRecognizer *)gesture {
+    if (gesture.state != UIGestureRecognizerStateRecognized) return;
+    UIWindow *window=[gesture.view isKindOfClass:UIWindow.class] ? (UIWindow *)gesture.view : gesture.view.window;
+    if (window) RIShowSettings(window.rootViewController);
+}
+@end
+
+void RIInstallMenu(void) {
+    NSCAssert(NSThread.isMainThread,@"Menu gestures must be installed on the main thread");
+    static RIMenuGestureRelay *relay=nil;
+    static dispatch_once_t once;
+    dispatch_once(&once,^{ relay=[RIMenuGestureRelay new]; });
+    for (UIScene *scene in UIApplication.sharedApplication.connectedScenes) {
+        if (![scene isKindOfClass:UIWindowScene.class] ||
+            scene.activationState != UISceneActivationStateForegroundActive) continue;
+        for (UIWindow *window in ((UIWindowScene *)scene).windows) {
+            if (!window.isKeyWindow) continue;
+            BOOL already=NO;
+            for (UIGestureRecognizer *g in window.gestureRecognizers)
+                if ([g.name isEqualToString:@"RiseInstaMenuThreeFingerHold"]) {
+                    already=YES; break;
+                }
+            if (already) continue;
+            UILongPressGestureRecognizer *hold=[[UILongPressGestureRecognizer alloc] initWithTarget:relay action:@selector(openOnHold:)];
+            hold.name=@"RiseInstaMenuThreeFingerHold";
+            hold.numberOfTouchesRequired=3;
+            hold.minimumPressDuration=0.7;
+            hold.cancelsTouchesInView=NO;
+            hold.delegate=relay;
+            [window addGestureRecognizer:hold];
+
+            // A separate fallback for Instagram screens that consume long presses.
+            UITapGestureRecognizer *tap=[[UITapGestureRecognizer alloc] initWithTarget:relay action:@selector(openOnTap:)];
+            tap.name=@"RiseInstaMenuThreeFingerDoubleTap";
+            tap.numberOfTouchesRequired=3;
+            tap.numberOfTapsRequired=2;
+            tap.cancelsTouchesInView=NO;
+            tap.delegate=relay;
+            [window addGestureRecognizer:tap];
+            RILog(@"Installed RiseInsta 3-finger menu gestures in %@",NSStringFromClass(window.class));
+        }
+    }
+}

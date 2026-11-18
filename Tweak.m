@@ -153,10 +153,25 @@ static void RIStoryCapture(void) {
         ((void (*)(id,SEL,id))original)(object,sel,item); RIHit(key,NO); RITrackStoryController(object);
     }),key);
 }
+static void RITestFlightReceiptHook(void) {
+    NSString *key=@"NSBundle/appStoreReceiptURL";
+    if (RIAlready(key)) return;
+    Class cls=NSBundle.class; SEL sel=@selector(appStoreReceiptURL);
+    Method method=RICheck(key,cls,sel,@"@",@[]);
+    if (!method) { RIStatus(key,@"method missing or ABI mismatch"); return; }
+    IMP original=method_getImplementation(method);
+    IMP replacement=imp_implementationWithBlock(^NSURL *(NSBundle *bundle){
+        NSURL *url=((NSURL *(*)(id,SEL))original)(bundle,sel);
+        BOOL hide=RIPref(RI_HIDE_TESTFLIGHT,YES) && bundle==NSBundle.mainBundle && [url.lastPathComponent isEqualToString:@"sandboxReceipt"];
+        RIHit(key,hide);
+        return hide ? [[url URLByDeletingLastPathComponent] URLByAppendingPathComponent:@"receipt"] : url;
+    });
+    RIReplace(cls,sel,method,replacement,key);
+}
 void RIInstallHooks(void) {
     NSCAssert(NSThread.isMainThread,@"Hook installation must be serialized");
     for (NSDictionary *target in RIGhostTargets()) RIGhost(target);
-    RIFeed(); RIStoryCapture();
+    RIFeed(); RIStoryCapture(); RITestFlightReceiptHook();
     for (NSString *name in RIMediaViewClasses()) RIMediaHook(name);
 }
 __attribute__((constructor)) static void RIStart(void) {
@@ -165,7 +180,7 @@ __attribute__((constructor)) static void RIStart(void) {
         // Bundle IDs can change during sideload signing; the executable stays Instagram.
         if (![executable isEqualToString:@"Instagram"]) return;
         dispatch_async(dispatch_get_main_queue(), ^{
-            RILog(@"RiseInsta 1.2.0 beta loaded; interface hooks use observed Instagram classes");
+            RILog(@"RiseInsta 1.2.1 beta loaded; includes optional TestFlight nag suppression");
             RIInstallMenu(); RIInstallHooks();
             for (NSNumber *seconds in @[@1,@3,@10]) dispatch_after(dispatch_time(DISPATCH_TIME_NOW,(int64_t)(seconds.doubleValue*NSEC_PER_SEC)),dispatch_get_main_queue(),^{ RIInstallHooks(); });
             [NSNotificationCenter.defaultCenter addObserverForName:UIApplicationDidBecomeActiveNotification object:nil queue:NSOperationQueue.mainQueue usingBlock:^(NSNotification *note){ RIInstallHooks(); }];

@@ -27,6 +27,7 @@ FOUNDATION_EXPORT NSDictionary *RIHookStatus(void);
 #define RI_HIDE_FEED_ADS @"hide_feed_ads"
 #define RI_DOWNLOAD @"download"
 #define RI_SAVE_TO_PHOTOS @"save_to_photos"
+#define RI_HIDE_TESTFLIGHT @"hide_testflight_popup"
 
 @interface RIDownloader : NSObject
 + (void)saveURL:(NSURL *)url kind:(NSString *)kind share:(BOOL)share from:(UIViewController *)host;

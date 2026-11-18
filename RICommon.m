@@ -28,7 +28,8 @@ NSArray<NSDictionary *> *RIFeatures(void) {
             @{@"key":RI_HIDE_FEED_ADS,@"title":@"إخفاء الإعلانات",@"detail":@"مسارات الخلاصة والقصص والريلز المرصودة في Beegram، عند توفرها",@"default":@NO},
             @{@"key":RI_DOWNLOAD,@"title":@"قائمة الوسائط",@"detail":@"ضغطة مطولة بإصبع واحد على القصة، وبإصبعين على بقية الوسائط",@"default":@YES},
             @{@"key":RI_SAVE_TO_PHOTOS,@"title":@"حفظ في الصور",@"detail":@"عند تعطيله تظهر نافذة مشاركة الملف",@"default":@YES},
-            @{@"key":@"floating_settings",@"title":@"زر الإعدادات العائم",@"detail":@"يمكن فتح الإعدادات أيضًا بالضغط المطول بثلاثة أصابع",@"default":@YES}
+            @{@"key":@"floating_settings",@"title":@"زر الإعدادات العائم",@"detail":@"يمكن فتح الإعدادات أيضًا بالضغط المطول بثلاثة أصابع",@"default":@YES},
+            @{@"key":RI_HIDE_TESTFLIGHT,@"title":@"إخفاء تنبيه Instagram Beta",@"detail":@"يخفي نافذة التحديث داخل التطبيق فقط؛ لا يمدد صلاحية نسخة البيتا (يتطلب إعادة تشغيل)",@"default":@YES}
         ];
     }); return rows;
 }
@@ -78,7 +79,7 @@ NSString *RIDiagnostics(void) {
     NSDictionary *info=NSBundle.mainBundle.infoDictionary;
     NSMutableDictionary *prefs=[NSMutableDictionary dictionary];
     for (NSDictionary *row in RIFeatures()) prefs[row[@"key"]]=@(RIPref(row[@"key"],[row[@"default"] boolValue]));
-    NSMutableString *report=[NSMutableString stringWithFormat:@"RiseInsta 1.2.0 beta interface-inspector\nBundle: %@\nInstagram: %@ (%@)\niOS: %@\nDownloads: %lu\nPrefs: %@\nCalls=0 means no observed invocation, not working-feature proof.\n\n%@\n\n",NSBundle.mainBundle.bundleIdentifier,info[@"CFBundleShortVersionString"],info[@"CFBundleVersion"],UIDevice.currentDevice.systemVersion,(unsigned long)RIDownloader.activeCount,prefs,RIHookStatus()];
+    NSMutableString *report=[NSMutableString stringWithFormat:@"RiseInsta 1.2.1 beta interface-inspector\nBundle: %@\nInstagram: %@ (%@)\niOS: %@\nDownloads: %lu\nPrefs: %@\nCalls=0 means no observed invocation, not working-feature proof.\n\n%@\n\n",NSBundle.mainBundle.bundleIdentifier,info[@"CFBundleShortVersionString"],info[@"CFBundleVersion"],UIDevice.currentDevice.systemVersion,(unsigned long)RIDownloader.activeCount,prefs,RIHookStatus()];
     @synchronized(RILogs()) { [report appendString:[RILogs() componentsJoinedByString:@"\n"]]; }
     return report;
 }

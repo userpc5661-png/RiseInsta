@@ -15,5 +15,5 @@ jobs:
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: RiseInsta-dylib
-          path: out/RiseInsta-1.2.0.dylib
+          path: out/RiseInsta-1.2.1.dylib
           if-no-files-found: error

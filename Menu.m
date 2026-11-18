@@ -94,18 +94,18 @@ static void RICopyInterfaceReport(UIViewController *host) {
 - (void)close { [self dismissViewControllerAnimated:YES completion:nil]; }
 - (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView { return 6; }
 - (NSInteger)tableView:(UITableView *)t numberOfRowsInSection:(NSInteger)section {
-    switch (section) { case 0:return 3; case 1:return 2; case 2:return 2; case 3:return 7; case 4:return 1; default:return 3; }
+    switch (section) { case 0:return 3; case 1:return 2; case 2:return 3; case 3:return 7; case 4:return 1; default:return 3; }
 }
 - (NSString *)tableView:(UITableView *)t titleForHeaderInSection:(NSInteger)section {
     return @[@"الخصوصية",@"المنشورات والريلز والقصص",@"الملف الشخصي والواجهة",@"محرر أزرار RiseInsta",@"أدوات الوسائط",@"التشخيص والصيانة"][section];
 }
 - (NSString *)tableView:(UITableView *)t titleForFooterInSection:(NSInteger)section {
-    return section==0 ? @"تتوقف بعض الخيارات إذا لم يتوفر مسار متوافق في إصدار إنستغرام." : (section==3 ? @"تخصيص أزرار RiseInsta المضافة فقط؛ لا يغير وظائف أزرار إنستغرام الأصلية." : (section==5 ? @"التشخيص يفحص الواجهة الظاهرة ولا ينسخ نصوصها أو بيانات الحساب." : @"نسخة تجريبية 1.2.0؛ تحقق من كل ميزة على جهازك."));
+    return section==0 ? @"تتوقف بعض الخيارات إذا لم يتوفر مسار متوافق في إصدار إنستغرام." : (section==3 ? @"تخصيص أزرار RiseInsta المضافة فقط؛ لا يغير وظائف أزرار إنستغرام الأصلية." : (section==5 ? @"التشخيص يفحص الواجهة الظاهرة ولا ينسخ نصوصها أو بيانات الحساب." : @"نسخة تجريبية 1.2.1؛ تحقق من كل ميزة على جهازك."));
 }
 - (UITableViewCell *)tableView:(UITableView *)t cellForRowAtIndexPath:(NSIndexPath *)ip {
     UITableViewCell *cell=[[UITableViewCell alloc] initWithStyle:UITableViewCellStyleSubtitle reuseIdentifier:nil];
     cell.textLabel.numberOfLines=0; cell.detailTextLabel.numberOfLines=0;
-    NSArray *featureIndexes = ip.section==0 ? @[@0,@1,@2] : (ip.section==1 ? @[@3,@4] : (ip.section==2 ? @[@5,@6] : @[]));
+    NSArray *featureIndexes = ip.section==0 ? @[@0,@1,@2] : (ip.section==1 ? @[@3,@4] : (ip.section==2 ? @[@5,@6,@7] : @[]));
     if (featureIndexes.count) {
         NSUInteger index=[featureIndexes[ip.row] unsignedIntegerValue]; NSDictionary *row=RIFeatures()[index];
         cell.textLabel.text=row[@"title"]; cell.detailTextLabel.text=row[@"detail"]; cell.selectionStyle=UITableViewCellSelectionStyleNone;

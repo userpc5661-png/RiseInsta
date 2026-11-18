@@ -78,7 +78,7 @@ NSString *RIDiagnostics(void) {
     NSDictionary *info=NSBundle.mainBundle.infoDictionary;
     NSMutableDictionary *prefs=[NSMutableDictionary dictionary];
     for (NSDictionary *row in RIFeatures()) prefs[row[@"key"]]=@(RIPref(row[@"key"],[row[@"default"] boolValue]));
-    NSMutableString *report=[NSMutableString stringWithFormat:@"RiseInsta 1.1.1 reference02\nBundle: %@\nInstagram: %@ (%@)\niOS: %@\nDownloads: %lu\nPrefs: %@\nCalls=0 means no observed invocation, not working-feature proof.\n\n%@\n\n",NSBundle.mainBundle.bundleIdentifier,info[@"CFBundleShortVersionString"],info[@"CFBundleVersion"],UIDevice.currentDevice.systemVersion,(unsigned long)RIDownloader.activeCount,prefs,RIHookStatus()];
+    NSMutableString *report=[NSMutableString stringWithFormat:@"RiseInsta 1.1.2 interface-inspector\nBundle: %@\nInstagram: %@ (%@)\niOS: %@\nDownloads: %lu\nPrefs: %@\nCalls=0 means no observed invocation, not working-feature proof.\n\n%@\n\n",NSBundle.mainBundle.bundleIdentifier,info[@"CFBundleShortVersionString"],info[@"CFBundleVersion"],UIDevice.currentDevice.systemVersion,(unsigned long)RIDownloader.activeCount,prefs,RIHookStatus()];
     @synchronized(RILogs()) { [report appendString:[RILogs() componentsJoinedByString:@"\n"]]; }
     return report;
 }

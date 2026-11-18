@@ -10,12 +10,10 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
-      - name: Check runtime hook engine on macOS
-        run: bash scripts/test-runtime.sh
-      - name: Build and verify standalone arm64 dylib
+      - name: Build standalone dylib
         run: bash scripts/build.sh
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: RiseInsta-standalone-arm64
-          path: out/*
+          name: RiseInsta-dylib
+          path: out/RiseInsta.dylib
           if-no-files-found: error

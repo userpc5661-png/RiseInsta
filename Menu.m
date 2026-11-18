@@ -135,8 +135,8 @@ static NSArray<NSDictionary *> *RIMenuPages(void) {
 - (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView { return 1; }
 - (NSArray<NSDictionary *> *)rows {
     if ([self.page isEqualToString:@"home"]) return RIMenuPages();
-    if ([self.page isEqualToString:@"privacy"]) return @[@{@"feature":@2},@{@"feature":@3},@{@"target_toggle":@"priv_switch",@"title":@"إخفاء قوائم المتابعين والمتابَعين",@"detail":@"مفتاح Beegram التجريبي؛ قد يتطلب تفعيلًا من خادم إنستغرام.",@"icon":@"person.2.slash"}];
-    if ([self.page isEqualToString:@"developer"]) return @[@{@"target_toggle":@"meta_employee_enabled",@"title":@"تفعيل خيارات المطوّر الداخلية",@"detail":@"مفتاح وضع المطوّر من المرجع. بعد التفعيل جرّب هزّ الجهاز لفتح القائمة الداخلية.",@"icon":@"hammer"}];
+    if ([self.page isEqualToString:@"privacy"]) return @[@{@"feature":@2},@{@"feature":@3},@{@"target_toggle":@"priv_switch",@"title":@"إخفاء قوائم المتابعين والمتابَعين",@"detail":@"مفتاح RiseInsta محلي تجريبي؛ لا يغير إخفاء القوائم على الخادم.",@"icon":@"person.2.slash"}];
+    if ([self.page isEqualToString:@"developer"]) return @[@{@"action":@"feature_probe",@"title":@"فحص كلاسات وإعدادات المطوّر",@"detail":@"استخراج أسماء الكلاسات والـselectors المتاحة في نسخة إنستغرام الحالية",@"icon":@"hammer"},@{@"action":@"interface",@"title":@"فحص واجهة القائمة الداخلية",@"detail":@"افتح قائمة الهز الأصلية أولًا، ثم انسخ شجرة الواجهة",@"icon":@"rectangle.3.group"},@{@"target_toggle":@"meta_employee_enabled",@"title":@"مفتاح تجربة المطوّر المحلي",@"detail":@"تفضيل محلي تجريبي فقط؛ لا يمنح صفة موظف أو صلاحيات Meta",@"icon":@"switch.2"},@{@"info":@YES,@"title":@"Internal Settings / Dogfooding Assistant",@"detail":@"فتح الأدوات الأصلية يتطلب تحديد نقطة الربط الفعلية؛ لا يتم تجاوز أهلية الحساب."}];
     if ([self.page isEqualToString:@"messages"]) return @[@{@"feature":@0},@{@"feature":@1}];
     if ([self.page isEqualToString:@"stories"]) return @[@{@"feature":@2},@{@"feature":@3},@{@"feature":@4}];
     if ([self.page isEqualToString:@"posts"]) return @[@{@"feature":@3},@{@"feature":@4}];

@@ -17,7 +17,7 @@ static inline NSArray<NSDictionary *> *RIGhostTargets(void) {
     ];
 }
 static inline NSArray<NSString *> *RIMediaViewClasses(void) {
-    return @[@"IGUFIButtonBarView",@"IGFeedPhotoView",@"IGVideoPlayerOverlayContainerView",@"IGSundialViewerVideoCell",@"IGSundialViewerPhotoCell",@"IGSundialViewerCarouselCell",@"IGStoryPhotoView",@"IGProfilePictureImageView",@"IGSundialViewerVerticalUFI",@"IGSundialViewerVerticalUFI.IGSundialViewerVerticalUFI",@"IGStoryFullscreenOverlayView"];
+    return @[@"IGUFIButtonBarView",@"IGUFIInteractionCountsView",@"IGFeedPhotoView",@"IGVideoPlayerOverlayContainerView",@"IGSundialViewerVideoCell",@"IGSundialViewerPhotoCell",@"IGSundialViewerCarouselCell",@"IGStoryPhotoView",@"IGProfilePictureImageView",@"IGSundialViewerVerticalUFI",@"IGSundialViewerVerticalUFI.IGSundialViewerVerticalUFI",@"IGStoryFullscreenOverlayView",@"IGProfileNavigation.IGBadgedNavigationButton",@"IGNavigationBar"];
 }
 static inline NSArray<NSString *> *RIModelGetters(void) {
     return @[@"currentPlaybackMedia",@"media",@"currentStoryItem",@"item",@"model",@"viewModel",@"delegate",@"user"];

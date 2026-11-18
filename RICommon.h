@@ -18,6 +18,7 @@ FOUNDATION_EXPORT void RIShowSettings(UIViewController *host);
 FOUNDATION_EXPORT void RIAttachMediaMenu(UIView *view);
 FOUNDATION_EXPORT void RITrackStoryController(id controller);
 FOUNDATION_EXPORT void RIShowCurrentMediaMenu(UIViewController *host);
+FOUNDATION_EXPORT void RIAttachContextMenuButton(UIView *view);
 FOUNDATION_EXPORT NSDictionary *RIHookStatus(void);
 
 #define RI_GHOST_SEEN @"ghost_seen"

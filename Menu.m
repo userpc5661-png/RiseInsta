@@ -92,37 +92,46 @@ static void RICopyInterfaceReport(UIViewController *host) {
     self.view.semanticContentAttribute=UISemanticContentAttributeForceRightToLeft;
 }
 - (void)close { [self dismissViewControllerAnimated:YES completion:nil]; }
-- (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView { return 4; }
-- (NSInteger)tableView:(UITableView *)t numberOfRowsInSection:(NSInteger)section { return section==0 ? RIFeatures().count : ((section==1 || section==2) ? 1 : 3); }
+- (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView { return 6; }
+- (NSInteger)tableView:(UITableView *)t numberOfRowsInSection:(NSInteger)section {
+    switch (section) { case 0:return 3; case 1:return 2; case 2:return 2; case 3:return 7; case 4:return 1; default:return 3; }
+}
+- (NSString *)tableView:(UITableView *)t titleForHeaderInSection:(NSInteger)section {
+    return @[@"الخصوصية",@"المنشورات والريلز والقصص",@"الملف الشخصي والواجهة",@"محرر أزرار RiseInsta",@"أدوات الوسائط",@"التشخيص والصيانة"][section];
+}
 - (NSString *)tableView:(UITableView *)t titleForFooterInSection:(NSInteger)section {
-    return section==0 ? @"الإعدادات تطبق مباشرة. أعد فتح المحتوى لتحديث العناصر. اضغط مطولًا بثلاثة أصابع لفتح هذه الصفحة." : (section==2 ? @"يفحص العناصر الظاهرة فقط؛ لا ينسخ نص المنشورات أو بيانات الحساب." : @"نسخة تجريبية: توفر الكلاسات لا يثبت أن الميزة تعمل على إصدارك.");
+    return section==0 ? @"تتوقف بعض الخيارات إذا لم يتوفر مسار متوافق في إصدار إنستغرام." : (section==3 ? @"تخصيص أزرار RiseInsta المضافة فقط؛ لا يغير وظائف أزرار إنستغرام الأصلية." : (section==5 ? @"التشخيص يفحص الواجهة الظاهرة ولا ينسخ نصوصها أو بيانات الحساب." : @"نسخة تجريبية 1.2.0؛ تحقق من كل ميزة على جهازك."));
 }
 - (UITableViewCell *)tableView:(UITableView *)t cellForRowAtIndexPath:(NSIndexPath *)ip {
     UITableViewCell *cell=[[UITableViewCell alloc] initWithStyle:UITableViewCellStyleSubtitle reuseIdentifier:nil];
     cell.textLabel.numberOfLines=0; cell.detailTextLabel.numberOfLines=0;
-    cell.textLabel.font=[UIFont preferredFontForTextStyle:UIFontTextStyleBody];
-    cell.detailTextLabel.font=[UIFont preferredFontForTextStyle:UIFontTextStyleFootnote];
-    cell.textLabel.adjustsFontForContentSizeCategory=YES; cell.detailTextLabel.adjustsFontForContentSizeCategory=YES;
-    if (ip.section==0) {
-        NSDictionary *row=RIFeatures()[ip.row];
-        cell.textLabel.text=row[@"title"]; cell.detailTextLabel.text=row[@"detail"];
-        cell.selectionStyle=UITableViewCellSelectionStyleNone;
-        UISwitch *sw=[[UISwitch alloc] init]; sw.tag=ip.row;
-        sw.accessibilityLabel=row[@"title"];
-        sw.on=RIPref(row[@"key"],[row[@"default"] boolValue]);
-        [sw addTarget:self action:@selector(toggle:) forControlEvents:UIControlEventValueChanged]; cell.accessoryView=sw;
-    } else if (ip.section==1) {
-        cell.textLabel.text=@"تحميل الوسائط المعروضة";
-        cell.detailTextLabel.text=@"افتح منشورًا أو ريلًا أو قصة، ثم استخدم هذا الخيار";
-        cell.accessoryType=UITableViewCellAccessoryDisclosureIndicator;
-    } else if (ip.section==2) {
-        cell.textLabel.text=@"فحص الواجهة ونسخ الكلاسات";
-        cell.detailTextLabel.text=@"انسخ شجرة العناصر الظاهرة وأسماء الكلاسات وإطاراتها، ثم أرسل التقرير هنا";
-        cell.accessoryType=UITableViewCellAccessoryDisclosureIndicator;
-    } else {
-        cell.textLabel.text=@[@"التشخيص ونسخ التقرير",@"إلغاء التحميلات الجارية",@"إعادة ضبط إعدادات RiseInsta"][ip.row];
-        cell.accessoryType=UITableViewCellAccessoryDisclosureIndicator;
-    } return cell;
+    NSArray *featureIndexes = ip.section==0 ? @[@0,@1,@2] : (ip.section==1 ? @[@3,@4] : (ip.section==2 ? @[@5,@6] : @[]));
+    if (featureIndexes.count) {
+        NSUInteger index=[featureIndexes[ip.row] unsignedIntegerValue]; NSDictionary *row=RIFeatures()[index];
+        cell.textLabel.text=row[@"title"]; cell.detailTextLabel.text=row[@"detail"]; cell.selectionStyle=UITableViewCellSelectionStyleNone;
+        UISwitch *sw=[[UISwitch alloc] init]; sw.tag=(NSInteger)index; sw.on=RIPref(row[@"key"],[row[@"default"] boolValue]);
+        [sw addTarget:self action:@selector(toggle:) forControlEvents:UIControlEventValueChanged]; cell.accessoryView=sw; return cell;
+    }
+    if (ip.section==3) {
+        NSArray *labels=@[@"إظهار زر تنزيل المنشور",@"إظهار زر تنزيل الريلز",@"إظهار أيقونة الملف الشخصي",@"إظهار أيقونة الإعدادات",@"أيقونة أزرار التنزيل",@"حجم أزرار التنزيل",@"موضع زر المنشور"];
+        NSArray *keys=@[@"editor_post",@"editor_reels",@"editor_profile",@"editor_settings",@"editor_icon",@"editor_size",@"editor_post_position"];
+        cell.textLabel.text=labels[ip.row]; cell.detailTextLabel.text=ip.row<2 ? @"تطبيق مباشر عند تحديث الواجهة" : @"اضغط للاختيار";
+        if (ip.row<4) { UISwitch *sw=[UISwitch new]; sw.tag=100+ip.row; sw.on=RIPref(keys[ip.row],YES); [sw addTarget:self action:@selector(editorToggle:) forControlEvents:UIControlEventValueChanged]; cell.accessoryView=sw; }
+        else cell.accessoryType=UITableViewCellAccessoryDisclosureIndicator;
+        return cell;
+    }
+    if (ip.section==4) { cell.textLabel.text=@"تحميل الوسائط المعروضة"; cell.detailTextLabel.text=@"قائمة تحميل ومشاركة من المنشور أو الريلز أو القصة"; }
+    else if (ip.section==5) {
+        NSArray *labels=@[@"تشخيص ونسخ التقرير",@"فحص الواجهة ونسخ الكلاسات",@"إلغاء التحميلات الجارية"];
+        cell.textLabel.text=labels[ip.row]; cell.detailTextLabel.text=ip.row==1 ? @"افتح الشاشة المطلوبة ثم انسخ شجرتها الظاهرة" : @"";
+    }
+    cell.accessoryType=UITableViewCellAccessoryDisclosureIndicator; return cell;
+}
+- (void)editorToggle:(UISwitch *)sw { NSArray *keys=@[@"editor_post",@"editor_reels",@"editor_profile",@"editor_settings"]; if(sw.tag>=100 && sw.tag<104) RISetPref(keys[sw.tag-100],sw.on); }
+- (void)showChoice:(NSArray<NSString *> *)titles key:(NSString *)key values:(NSArray<NSString *> *)values {
+    UIAlertController *a=[UIAlertController alertControllerWithTitle:@"تخصيص الزر" message:nil preferredStyle:UIAlertControllerStyleActionSheet];
+    for (NSUInteger i=0;i<titles.count;i++) { NSString *v=values[i]; [a addAction:[UIAlertAction actionWithTitle:titles[i] style:UIAlertActionStyleDefault handler:^(UIAlertAction *x){ [[NSUserDefaults standardUserDefaults] setObject:v forKey:[@"com.riseinsta." stringByAppendingString:key]]; [NSNotificationCenter.defaultCenter postNotificationName:RISettingsChanged object:key]; }]]; }
+    [a addAction:[UIAlertAction actionWithTitle:@"إلغاء" style:UIAlertActionStyleCancel handler:nil]]; a.popoverPresentationController.sourceView=self.view; a.popoverPresentationController.sourceRect=CGRectMake(CGRectGetMidX(self.view.bounds),CGRectGetMidY(self.view.bounds),1,1); [self presentViewController:a animated:YES completion:nil];
 }
 - (void)toggle:(UISwitch *)sw {
     if (sw.tag<0 || (NSUInteger)sw.tag>=RIFeatures().count) return;
@@ -130,30 +139,20 @@ static void RICopyInterfaceReport(UIViewController *host) {
 }
 - (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)ip {
     [tableView deselectRowAtIndexPath:ip animated:YES];
-    if (ip.section==0) return;
-    if (ip.section==1) {
-        UIViewController *host=self.navigationController.presentingViewController;
-        [self dismissViewControllerAnimated:YES completion:^{ RIShowCurrentMediaMenu(host); }]; return;
+    if (ip.section<3 || (ip.section==3 && ip.row<4)) return;
+    if (ip.section==3) {
+        if (ip.row==4) [self showChoice:@[@"سهم لأسفل",@"تنزيل",@"حفظ",@"نجمة"] key:@"editor_icon" values:@[@"arrow.down.circle.fill",@"arrow.down.to.line",@"square.and.arrow.down",@"star"]];
+        else if (ip.row==5) [self showChoice:@[@"صغير 36",@"متوسط 44",@"كبير 52"] key:@"editor_size" values:@[@"36",@"44",@"52"]];
+        else [self showChoice:@[@"يسار الشريط",@"وسط الشريط",@"يمين الشريط"] key:@"editor_post_position" values:@[@"left",@"center",@"right"]];
+        return;
     }
-    if (ip.section==2) {
-        UIViewController *host=self.navigationController.presentingViewController;
-        [self dismissViewControllerAnimated:YES completion:^{ RICopyInterfaceReport(host); }]; return;
-    }
+    UIViewController *host=self.navigationController.presentingViewController;
+    if (ip.section==4) { [self dismissViewControllerAnimated:YES completion:^{ RIShowCurrentMediaMenu(host); }]; return; }
     if (ip.row==0) {
-        NSString *report=RIDiagnostics();
-        UIAlertController *alert=[UIAlertController alertControllerWithTitle:@"تشخيص RiseInsta" message:report preferredStyle:UIAlertControllerStyleAlert];
-        [alert addAction:[UIAlertAction actionWithTitle:@"نسخ التقرير" style:UIAlertActionStyleDefault handler:^(UIAlertAction *a){ UIPasteboard.generalPasteboard.string=report; }]];
-        [alert addAction:[UIAlertAction actionWithTitle:@"إغلاق" style:UIAlertActionStyleCancel handler:nil]];
-        [self presentViewController:alert animated:YES completion:nil];
-    } else if (ip.row==1) { [RIDownloader cancelAll]; RIAlert(@"RiseInsta",@"تم طلب إلغاء التحميلات",self); }
-    else {
-        UIAlertController *alert=[UIAlertController alertControllerWithTitle:@"إعادة ضبط الإعدادات؟" message:@"تُعاد إعدادات RiseInsta فقط إلى قيمها الافتراضية." preferredStyle:UIAlertControllerStyleAlert];
-        [alert addAction:[UIAlertAction actionWithTitle:@"إلغاء" style:UIAlertActionStyleCancel handler:nil]];
-        [alert addAction:[UIAlertAction actionWithTitle:@"إعادة الضبط" style:UIAlertActionStyleDestructive handler:^(UIAlertAction *a){
-            for (NSDictionary *row in RIFeatures()) RISetPref(row[@"key"],[row[@"default"] boolValue]);
-            [self.tableView reloadData];
-        }]]; [self presentViewController:alert animated:YES completion:nil];
-    }
+        NSString *report=RIDiagnostics(); UIAlertController *a=[UIAlertController alertControllerWithTitle:@"تشخيص RiseInsta" message:report preferredStyle:UIAlertControllerStyleAlert];
+        [a addAction:[UIAlertAction actionWithTitle:@"نسخ التقرير" style:UIAlertActionStyleDefault handler:^(UIAlertAction *x){ UIPasteboard.generalPasteboard.string=report; }]]; [a addAction:[UIAlertAction actionWithTitle:@"إغلاق" style:UIAlertActionStyleCancel handler:nil]]; [self presentViewController:a animated:YES completion:nil];
+    } else if (ip.row==1) [self dismissViewControllerAnimated:YES completion:^{ RICopyInterfaceReport(host); }];
+    else { [RIDownloader cancelAll]; RIAlert(@"RiseInsta",@"تم طلب إلغاء التحميلات",self); }
 }
 @end
 

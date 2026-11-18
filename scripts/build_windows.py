@@ -31,8 +31,8 @@ for source in sources:
     target=obj/(pathlib.Path(source).stem+'.o'); objects.append(target)
     print('Compiling',source,flush=True)
     run([clang,'-target','arm64-apple-ios16.0','-isysroot',sdk,'-fobjc-arc','-fblocks','-O2','-Wall','-Wextra','-Werror','-Wno-unused-parameter','-Wno-deprecated-declarations','-c',source,'-o',target])
-dylib=out/'RiseInsta.dylib'
-run([linker,'-flavor','darwin','-arch','arm64','-dylib','-platform_version','ios','16.0','16.5','-syslibroot',sdk,'-L',sdk/'usr/lib','-F',sdk/'System/Library/Frameworks','-install_name','@rpath/RiseInsta.dylib','-adhoc_codesign','-o',dylib,*objects,'-lobjc','-lSystem','-framework','Foundation','-framework','UIKit','-framework','Photos','-framework','UniformTypeIdentifiers','-framework','QuartzCore','-framework','CoreGraphics'])
+dylib=out/'RiseInsta-1.2.0.dylib'
+run([linker,'-flavor','darwin','-arch','arm64','-dylib','-platform_version','ios','16.0','16.5','-syslibroot',sdk,'-L',sdk/'usr/lib','-F',sdk/'System/Library/Frameworks','-install_name','@rpath/RiseInsta-1.2.0.dylib','-adhoc_codesign','-o',dylib,*objects,'-lobjc','-lSystem','-framework','Foundation','-framework','UIKit','-framework','Photos','-framework','UniformTypeIdentifiers','-framework','QuartzCore','-framework','CoreGraphics'])
 run([sys.executable,'scripts/verify_macho.py',dylib])
 run([sys.executable,'scripts/verify_signature.py',dylib])
 manifest={'compiler':run([clang,'--version']),'linker':run([linker,'-flavor','darwin','--version']),'sdk':str(sdk),'deployment_target':'iOS 16.0','architecture':'arm64','signature':'LLD ad-hoc; re-sign with the host IPA','runtime_tested':False}
@@ -40,5 +40,5 @@ try:
     manifest['sdk_repository_commit']=subprocess.check_output(['git','-C',str(sdk.parent),'rev-parse','HEAD'],text=True).strip()
 except (subprocess.CalledProcessError,FileNotFoundError): pass
 (out/'toolchain.json').write_text(json.dumps(manifest,indent=2),encoding='utf-8')
-(out/'SHA256SUMS').write_text(hashlib.sha256(dylib.read_bytes()).hexdigest()+'  RiseInsta.dylib\n',encoding='utf-8')
+(out/'SHA256SUMS').write_text(hashlib.sha256(dylib.read_bytes()).hexdigest()+'  RiseInsta-1.2.0.dylib\n',encoding='utf-8')
 print('Built:',dylib)

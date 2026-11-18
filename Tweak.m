@@ -135,7 +135,11 @@ static void RIMediaHook(NSString *name) {
     IMP replacement=imp_implementationWithBlock(^(UIView *view){
         ((void (*)(id,SEL))original)(view,sel);
         RIHit(key,NO);
-        if (view.window) RIAttachMediaMenu(view);
+        if (view.window) {
+            NSString *className=NSStringFromClass(view.class);
+            if ([className isEqualToString:@"IGNavigationBar"] || [className containsString:@"IGBadgedNavigationButton"]) RIAttachContextMenuButton(view);
+            else RIAttachMediaMenu(view);
+        }
     }); RIReplace(cls,sel,method,replacement,key);
 }
 static void RIStoryCapture(void) {
@@ -161,7 +165,7 @@ __attribute__((constructor)) static void RIStart(void) {
         // Bundle IDs can change during sideload signing; the executable stays Instagram.
         if (![executable isEqualToString:@"Instagram"]) return;
         dispatch_async(dispatch_get_main_queue(), ^{
-            RILog(@"RiseInsta 1.1.1 reference02 loaded; Beegram model paths");
+            RILog(@"RiseInsta 1.2.0 beta loaded; interface hooks use observed Instagram classes");
             RIInstallMenu(); RIInstallHooks();
             for (NSNumber *seconds in @[@1,@3,@10]) dispatch_after(dispatch_time(DISPATCH_TIME_NOW,(int64_t)(seconds.doubleValue*NSEC_PER_SEC)),dispatch_get_main_queue(),^{ RIInstallHooks(); });
             [NSNotificationCenter.defaultCenter addObserverForName:UIApplicationDidBecomeActiveNotification object:nil queue:NSOperationQueue.mainQueue usingBlock:^(NSNotification *note){ RIInstallHooks(); }];

@@ -102,6 +102,9 @@ static NSArray<NSDictionary *> *RIMenuPages(void) {
         @{@"id":@"stories",@"title":@"القصص",@"detail":@"المشاهدة والتنزيل",@"icon":@"circle.dashed"},
         @{@"id":@"posts",@"title":@"المنشورات والريلز",@"detail":@"التنزيل وأزرار التفاعل",@"icon":@"play.rectangle"},
         @{@"id":@"profile",@"title":@"الملف الشخصي",@"detail":@"تنزيل صورة الملف الشخصي",@"icon":@"person.crop.circle"},
+        @{@"id":@"comments",@"title":@"التعليقات والتفاعل",@"detail":@"البحث والفرز ونسخ التعليقات",@"icon":@"bubble.left.and.text.bubble.right"},
+        @{@"id":@"calls",@"title":@"المكالمات والصوتيات",@"detail":@"أدوات المكالمات والرسائل الصوتية",@"icon":@"phone.arrow.up.right"},
+        @{@"id":@"ai",@"title":@"Rise AI",@"detail":@"الردود الذكية والمساعد والتخصيص",@"icon":@"sparkles"},
         @{@"id":@"appearance",@"title":@"المظهر والأزرار",@"detail":@"إظهار أزرار التنزيل",@"icon":@"slider.horizontal.3"},
         @{@"id":@"media",@"title":@"التحميلات والوسائط",@"detail":@"الحفظ والمشاركة وإدارة التنزيلات",@"icon":@"arrow.down.circle"},
         @{@"id":@"account_features",@"title":@"ميزات الحساب والتحديثات",@"detail":@"كتالوج الميزات وحالة توفرها",@"icon":@"sparkles.rectangle.stack"},
@@ -141,6 +144,22 @@ static NSArray<NSDictionary *> *RIMenuPages(void) {
     if ([self.page isEqualToString:@"stories"]) return @[@{@"feature":@2},@{@"feature":@3},@{@"feature":@4}];
     if ([self.page isEqualToString:@"posts"]) return @[@{@"feature":@3},@{@"feature":@4}];
     if ([self.page isEqualToString:@"media"]) return @[@{@"action":@"open_media",@"title":@"تحميل الوسائط الظاهرة",@"detail":@"خيارات العنصر الحالي فقط",@"icon":@"arrow.down.to.line"},@{@"feature":@5},@{@"action":@"screen_record",@"title":RIScreenRecorderIsRecording()?@"إيقاف تسجيل الشاشة":@"بدء تسجيل الشاشة",@"detail":@"يسجل شاشة التطبيق؛ لا يسجل صوت المكالمات",@"icon":RIScreenRecorderIsRecording()?@"stop.circle":@"record.circle"},@{@"action":@"cancel",@"title":@"إلغاء التحميلات الجارية",@"icon":@"xmark.circle"}];
+    if ([self.page isEqualToString:@"comments"]) return @[
+        @{@"info":@YES,@"title":@"بحث التعليقات",@"detail":@"قيد الربط: يحتاج كلاس قائمة التعليقات في Instagram 456.0.0."},
+        @{@"info":@YES,@"title":@"ترتيب التعليقات",@"detail":@"الأحدث والأقدم والأكثر إعجابًا وردودًا — يحتاج ربط الواجهة."},
+        @{@"info":@YES,@"title":@"نسخ التعليق واسم المستخدم",@"detail":@"قيد الربط: القائمة المطولة للتعليقات."},
+        @{@"info":@YES,@"title":@"تصدير أسماء المستخدمين",@"detail":@"قيد الربط: لا يتم جمع بيانات الحسابات تلقائيًا."}
+    ];
+    if ([self.page isEqualToString:@"calls"]) return @[
+        @{@"info":@YES,@"title":@"تنزيل الرسائل الصوتية",@"detail":@"يحتاج ربط كلاس الرسالة الصوتية ومصدر الملف."},
+        @{@"info":@YES,@"title":@"تسجيل المكالمات",@"detail":@"غير منفذ؛ يتطلب موافقة الأطراف والتحقق من قدرة التقاط الصوت."},
+        @{@"info":@YES,@"title":@"تغيير الصوت ومعاينته",@"detail":@"غير منفذ؛ يحتاج محرك معالجة الصوت."}
+    ];
+    if ([self.page isEqualToString:@"ai"]) return @[
+        @{@"info":@YES,@"title":@"مساعد Rise AI",@"detail":@"غير مربوط بخدمة AI؛ لا يتم إرسال محادثاتك لأي مزود."},
+        @{@"info":@YES,@"title":@"الردود التلقائية",@"detail":@"غير منفذة؛ تحتاج API وإعدادات موافقة وصلاحيات."},
+        @{@"info":@YES,@"title":@"شخصية المساعد وقاعدة المعرفة",@"detail":@"واجهة مخططة، لا يوجد مخزن بيانات."}
+    ];
     if ([self.page isEqualToString:@"appearance"]) return @[@{@"editor":@0,@"title":@"إظهار زر تنزيل المنشور",@"icon":@"square.and.arrow.down"},@{@"editor":@1,@"title":@"إظهار زر تنزيل الريلز",@"icon":@"play.rectangle"}];
     if ([self.page isEqualToString:@"diagnostics"]) return @[@{@"action":@"diagnostics",@"title":@"تشخيص ونسخ التقرير",@"icon":@"doc.text.magnifyingglass"},@{@"action":@"interface",@"title":@"فحص الواجهة ونسخ الكلاسات",@"detail":@"افتح الشاشة المطلوبة أولًا لنسخ شجرتها الظاهرة",@"icon":@"rectangle.3.group"},@{@"action":@"feature_probe",@"title":@"فحص خصوصية الملف وخيارات المطوّر",@"detail":@"انسخ كلاسات الشاشة وتواقيع الدوال المتاحة",@"icon":@"text.magnifyingglass"},@{@"action":@"login",@"title":@"تشخيص حفظ تسجيل الدخول",@"detail":@"ينسخ مؤشرات metadata فقط؛ دون قيم الجلسة",@"icon":@"person.badge.key"}];
     if ([self.page isEqualToString:@"profile"]) return @[@{@"action":@"profile_media",@"title":@"تنزيل صورة الملف الشخصي",@"detail":@"افتح الملف الشخصي واضغط مطولًا على الصورة، ثم اختر تنزيل أو مشاركة.",@"icon":@"person.crop.square"}];

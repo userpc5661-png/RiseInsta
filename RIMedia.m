@@ -133,7 +133,7 @@ void RIAttachMediaMenu(UIView *view) {
         view.userInteractionEnabled=YES; [view addGestureRecognizer:gesture];
         objc_setAssociatedObject(view,&RIMediaGestureKey,gesture,OBJC_ASSOCIATION_RETAIN_NONATOMIC); [RIMediaGesture.shared.views addObject:view];
     }
-    NSString *name=NSStringFromClass(view.class); BOOL post=[name isEqualToString:@"IGUFIInteractionCountsView"] || [name isEqualToString:@"IGUFIButtonBarView"];
+    NSString *name=NSStringFromClass(view.class); BOOL post=[name isEqualToString:@"IGUFIInteractionCountsView"];
     BOOL reels=[name containsString:@"IGSundialViewerVerticalUFI"];
     if (((post && RIPref(@"editor_post",YES)) || (reels && RIPref(@"editor_reels",YES))) && !objc_getAssociatedObject(view,&RIMediaButtonKey)) {
         UIButton *button=[UIButton buttonWithType:UIButtonTypeSystem]; button.tag=7102; button.backgroundColor=UIColor.clearColor;
@@ -143,7 +143,7 @@ void RIAttachMediaMenu(UIView *view) {
     }
     UIButton *button=objc_getAssociatedObject(view,&RIMediaButtonKey);
     if (button) { button.hidden=!RIPref(RI_DOWNLOAD,YES) || (post&&!RIPref(@"editor_post",YES)) || (reels&&!RIPref(@"editor_reels",YES));
-        if(post) RIPlacePostButton(button,view); else { CGFloat z=RIBtnSize(); button.frame=CGRectMake((CGRectGetWidth(view.bounds)-z)/2,CGRectGetHeight(view.bounds)-z-54,z,z); }
+        if(post) RIPlacePostButton(button,view); else { CGFloat z=RIBtnSize(); button.frame=CGRectMake(-z-4,CGRectGetHeight(view.bounds)*0.60,z,z); }
         [button setImage:[UIImage systemImageNamed:RIIcon()] forState:UIControlStateNormal];
     }
     // The reel rail and post UFI are supported; media surfaces keep the gesture-only affordance.

@@ -6,3 +6,7 @@ xcrun --sdk macosx clang -fobjc-arc -fblocks -Wall -Wextra -Werror \
   -Wno-unused-parameter RIRuntime.m tests/runtime.m -framework Foundation \
   -o .build-tests/runtime
 .build-tests/runtime
+xcrun --sdk macosx clang -fobjc-arc -fblocks -Wall -Wextra -Werror \
+  -Wno-unused-parameter RIRuntime.m RIMediaResolver.m tests/media-resolver.m -framework Foundation \
+  -o .build-tests/media-resolver
+.build-tests/media-resolver

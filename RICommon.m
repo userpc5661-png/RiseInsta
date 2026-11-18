@@ -25,7 +25,7 @@ NSArray<NSDictionary *> *RIFeatures(void) {
             @{@"key":RI_GHOST_SEEN,@"title":@"إخفاء قراءة الرسائل",@"detail":@"يعمل فقط عند توفر hooks متوافقة؛ راجع التشخيص",@"default":@NO},
             @{@"key":RI_GHOST_TYPING,@"title":@"إخفاء مؤشر الكتابة",@"detail":@"منع إرسال مؤشر الكتابة عبر المسارات المتاحة",@"default":@NO},
             @{@"key":RI_GHOST_STORY,@"title":@"إخفاء مشاهدة القصص",@"detail":@"التوافق يعتمد على إصدار إنستغرام؛ اختبر بحساب ثانٍ",@"default":@NO},
-            @{@"key":RI_HIDE_FEED_ADS,@"title":@"إخفاء إعلانات الخلاصة",@"detail":@"تصفية العناصر الإعلانية المعروفة عند تحديث الخلاصة",@"default":@NO},
+            @{@"key":RI_HIDE_FEED_ADS,@"title":@"إخفاء الإعلانات",@"detail":@"مسارات الخلاصة والقصص والريلز المرصودة في Beegram، عند توفرها",@"default":@NO},
             @{@"key":RI_DOWNLOAD,@"title":@"قائمة الوسائط",@"detail":@"اضغط مطولًا بإصبعين على الوسائط للتحميل أو النسخ",@"default":@YES},
             @{@"key":RI_SAVE_TO_PHOTOS,@"title":@"حفظ في الصور",@"detail":@"عند تعطيله تظهر نافذة مشاركة الملف",@"default":@YES},
             @{@"key":@"floating_settings",@"title":@"زر الإعدادات العائم",@"detail":@"يمكن فتح الإعدادات أيضًا بالضغط المطول بثلاثة أصابع",@"default":@YES}
@@ -76,7 +76,9 @@ void RILog(NSString *format, ...) {
 }
 NSString *RIDiagnostics(void) {
     NSDictionary *info=NSBundle.mainBundle.infoDictionary;
-    NSMutableString *report=[NSMutableString stringWithFormat:@"RiseInsta 1.1.0 candidate\nBundle: %@\nInstagram: %@ (%@)\niOS: %@\nDownloads: %lu\nHooks present are not proof of feature behavior.\n\n%@\n\n",NSBundle.mainBundle.bundleIdentifier,info[@"CFBundleShortVersionString"],info[@"CFBundleVersion"],UIDevice.currentDevice.systemVersion,(unsigned long)RIDownloader.activeCount,RIHookStatus()];
+    NSMutableDictionary *prefs=[NSMutableDictionary dictionary];
+    for (NSDictionary *row in RIFeatures()) prefs[row[@"key"]]=@(RIPref(row[@"key"],[row[@"default"] boolValue]));
+    NSMutableString *report=[NSMutableString stringWithFormat:@"RiseInsta 1.1.1 reference02\nBundle: %@\nInstagram: %@ (%@)\niOS: %@\nDownloads: %lu\nPrefs: %@\nCalls=0 means no observed invocation, not working-feature proof.\n\n%@\n\n",NSBundle.mainBundle.bundleIdentifier,info[@"CFBundleShortVersionString"],info[@"CFBundleVersion"],UIDevice.currentDevice.systemVersion,(unsigned long)RIDownloader.activeCount,prefs,RIHookStatus()];
     @synchronized(RILogs()) { [report appendString:[RILogs() componentsJoinedByString:@"\n"]]; }
     return report;
 }

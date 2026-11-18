@@ -7,7 +7,7 @@ xcrun --sdk iphoneos clang -arch arm64 -isysroot "$sdk" \
   -miphoneos-version-min=16.0 -fobjc-arc -fblocks -O2 \
   -Wall -Wextra -Werror -Wno-unused-parameter -Wno-deprecated-declarations \
   -dynamiclib -Wl,-install_name,@rpath/RiseInsta.dylib \
-  RIRuntime.m RICommon.m RIDownloader.m RIMedia.m Menu.m Tweak.m \
+  RIRuntime.m RICommon.m RIDownloader.m RIMediaResolver.m RIMedia.m Menu.m Tweak.m \
   -framework Foundation -framework UIKit -framework Photos \
   -framework UniformTypeIdentifiers -framework QuartzCore -framework CoreGraphics -o out/RiseInsta.dylib
 codesign --force --sign - out/RiseInsta.dylib

@@ -11,8 +11,8 @@
     self.view.semanticContentAttribute=UISemanticContentAttributeForceRightToLeft;
 }
 - (void)close { [self dismissViewControllerAnimated:YES completion:nil]; }
-- (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView { return 2; }
-- (NSInteger)tableView:(UITableView *)t numberOfRowsInSection:(NSInteger)section { return section==0 ? RIFeatures().count : 3; }
+- (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView { return 3; }
+- (NSInteger)tableView:(UITableView *)t numberOfRowsInSection:(NSInteger)section { return section==0 ? RIFeatures().count : (section==1 ? 1 : 3); }
 - (NSString *)tableView:(UITableView *)t titleForFooterInSection:(NSInteger)section {
     return section==0 ? @"الإعدادات تطبق مباشرة. أعد فتح المحتوى لتحديث العناصر. اضغط مطولًا بثلاثة أصابع لفتح هذه الصفحة." : @"نسخة تجريبية: توفر الكلاسات لا يثبت أن الميزة تعمل على إصدارك.";
 }
@@ -30,6 +30,10 @@
         sw.accessibilityLabel=row[@"title"];
         sw.on=RIPref(row[@"key"],[row[@"default"] boolValue]);
         [sw addTarget:self action:@selector(toggle:) forControlEvents:UIControlEventValueChanged]; cell.accessoryView=sw;
+    } else if (ip.section==1) {
+        cell.textLabel.text=@"تحميل الوسائط المعروضة";
+        cell.detailTextLabel.text=@"افتح منشورًا أو ريلًا أو قصة، ثم استخدم هذا الخيار";
+        cell.accessoryType=UITableViewCellAccessoryDisclosureIndicator;
     } else {
         cell.textLabel.text=@[@"التشخيص ونسخ التقرير",@"إلغاء التحميلات الجارية",@"إعادة ضبط إعدادات RiseInsta"][ip.row];
         cell.accessoryType=UITableViewCellAccessoryDisclosureIndicator;
@@ -41,7 +45,11 @@
 }
 - (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)ip {
     [tableView deselectRowAtIndexPath:ip animated:YES];
-    if (ip.section!=1) return;
+    if (ip.section==0) return;
+    if (ip.section==1) {
+        UIViewController *host=self.navigationController.presentingViewController;
+        [self dismissViewControllerAnimated:YES completion:^{ RIShowCurrentMediaMenu(host); }]; return;
+    }
     if (ip.row==0) {
         NSString *report=RIDiagnostics();
         UIAlertController *alert=[UIAlertController alertControllerWithTitle:@"تشخيص RiseInsta" message:report preferredStyle:UIAlertControllerStyleAlert];

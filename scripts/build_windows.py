@@ -25,7 +25,7 @@ def run(command):
     if result.stdout: print(result.stdout,end='')
     if result.returncode: raise SystemExit(result.returncode)
     return result.stdout
-sources=['RIRuntime.m','RICommon.m','RIDownloader.m','RIMedia.m','Menu.m','Tweak.m']
+sources=['RIRuntime.m','RICommon.m','RIDownloader.m','RIMediaResolver.m','RIMedia.m','Menu.m','Tweak.m']
 objects=[]
 for source in sources:
     target=obj/(pathlib.Path(source).stem+'.o'); objects.append(target)

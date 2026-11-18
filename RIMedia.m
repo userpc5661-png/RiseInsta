@@ -1,108 +1,144 @@
 #import "RICommon.h"
 #import "RITargets.h"
-static id RIField(id object,NSString *key) {
-    return [object isKindOfClass:NSDictionary.class] ? object[key] : RIGet(object,key);
-}
-static NSURL *RIURL(id value) {
-    NSURL *url=[value isKindOfClass:NSURL.class] ? value : ([value isKindOfClass:NSString.class] ? [NSURL URLWithString:value] : nil);
-    return url.host.length && [@[@"https",@"http"] containsObject:url.scheme.lowercaseString] ? url : nil;
-}
-static NSURL *RICandidateURL(id value) { return RIURL(value) ?: RIURL(RIField(value,@"url")) ?: RIURL(RIField(value,@"URL")); }
-static double RIDimension(id object,NSString *key) {
-    id value=RIField(object,key);
-    if ([value respondsToSelector:@selector(doubleValue)]) return [value doubleValue];
-    SEL selector=NSSelectorFromString(key);
-    if (![object respondsToSelector:selector]) return 0;
-    NSMethodSignature *sig=[object methodSignatureForSelector:selector];
-    if (sig.numberOfArguments!=2) return 0;
-    switch (sig.methodReturnType[0]) {
-        case 'q': return ((NSInteger (*)(id,SEL))objc_msgSend)(object,selector);
-        case 'Q': return ((NSUInteger (*)(id,SEL))objc_msgSend)(object,selector);
-        case 'i': return ((int (*)(id,SEL))objc_msgSend)(object,selector);
-        case 'I': return ((unsigned (*)(id,SEL))objc_msgSend)(object,selector);
-        case 'f': return ((float (*)(id,SEL))objc_msgSend)(object,selector);
-        case 'd': return ((double (*)(id,SEL))objc_msgSend)(object,selector);
-        default: return 0;
-    }
-}
-static NSURL *RIBestURL(id versions) {
-    if (![versions isKindOfClass:NSArray.class]) return RICandidateURL(versions);
-    NSURL *best=nil; double score=-1;
-    for (id candidate in versions) {
-        NSURL *url=RICandidateURL(candidate); if (!url) continue;
-        double area=RIDimension(candidate,@"width")*RIDimension(candidate,@"height");
-        if (!best || area>score) { best=url; score=area; }
-    } return best;
-}
-static NSDictionary *RIResolveItem(id object) {
-    NSURL *video=RIBestURL(RIField(object,RI_VIDEO_VERSIONS));
-    if (video) return @{@"url":video,@"kind":@"video"};
-    id images=RIField(object,RI_IMAGE_VERSIONS);
-    NSURL *image=RIBestURL(RIField(images,@"candidates") ?: images);
-    if (image) return @{@"url":image,@"kind":@"image"};
-    return nil;
-}
-static NSDictionary *RIFindMedia(UIView *view) {
+#import "RIMediaResolver.h"
+#import <QuartzCore/QuartzCore.h>
+
+static __weak id RIStoryController;
+void RITrackStoryController(id controller) { RIStoryController=controller; }
+
+static NSDictionary *RIFindMedia(UIView *view,UIViewController *host) {
     NSMutableArray *queue=[NSMutableArray array];
-    // Resolve now, never cache the previous media object of a reused cell.
     UIResponder *responder=view;
-    for (NSUInteger i=0; responder && i<12; i++,responder=responder.nextResponder) [queue addObject:responder];
+    for (NSUInteger i=0; responder && i<64; i++,responder=responder.nextResponder) [queue addObject:responder];
+    if (host) [queue addObject:host];
+    BOOL story=[NSStringFromClass(view.class) containsString:@"Story"] || [NSStringFromClass(host.class) containsString:@"Story"];
+    if (story) {
+        id section=RIStoryController;
+        id item=RIReferenceField(section,@"currentStoryItem");
+        if (item) [queue insertObject:item atIndex:0];
+    }
+    BOOL avatar=[NSStringFromClass(view.class) containsString:@"ProfilePicture"];
     NSHashTable *visited=[NSHashTable hashTableWithOptions:NSPointerFunctionsObjectPointerPersonality];
-    for (NSUInteger index=0; index<queue.count && index<96; index++) {
+    NSMutableArray *classes=[NSMutableArray array];
+    for (NSUInteger index=0; index<queue.count && index<192; index++) {
         id object=queue[index]; if ([visited containsObject:object]) continue;
         [visited addObject:object];
-        NSMutableArray *items=[NSMutableArray array]; id carousel=RIField(object,RI_CAROUSEL);
-        if ([carousel isKindOfClass:NSArray.class] && [carousel count]) {
-            for (id child in carousel) { NSDictionary *item=RIResolveItem(child); if (item) [items addObject:item]; }
-        } else { NSDictionary *item=RIResolveItem(object); if (item) [items addObject:item]; }
-        if (items.count) return @{@"object":object,@"items":items};
-        NSURL *avatar=[NSStringFromClass(view.class) containsString:@"ProfilePicture"] ? RIURL(RIField(object,RI_AVATAR)) : nil;
-        if (avatar) return @{@"object":object,@"items":@[@{@"url":avatar,@"kind":@"image"}]};
-        if (queue.count<96) for (NSString *key in RIModelGetters()) {
-            id next=RIField(object,key);
-            if (next && next!=object && ![next isKindOfClass:NSString.class] && ![next isKindOfClass:NSNumber.class] && queue.count<96) [queue addObject:next];
+        if (classes.count<12) [classes addObject:NSStringFromClass([object class])];
+        NSDictionary *result=RIResolveReferenceMedia(object,avatar);
+        if (result) { RILog(@"Media resolved via %@",NSStringFromClass([object class])); return result; }
+        if (queue.count<192) for (NSString *key in RIModelGetters()) {
+            id next=RIReferenceField(object,key);
+            if (next && next!=object && ![next isKindOfClass:NSString.class] && ![next isKindOfClass:NSNumber.class] && queue.count<192) [queue addObject:next];
         }
-    } return nil;
-}
-@interface RIMediaGesture : NSObject <UIGestureRecognizerDelegate>
-+ (instancetype)shared;
-@end
-@implementation RIMediaGesture
-+ (instancetype)shared { static RIMediaGesture *manager; static dispatch_once_t once; dispatch_once(&once,^{ manager=[self new]; }); return manager; }
-- (BOOL)gestureRecognizerShouldBegin:(UIGestureRecognizer *)gesture { return RIPref(RI_DOWNLOAD,YES); }
-- (BOOL)gestureRecognizer:(UIGestureRecognizer *)a shouldRecognizeSimultaneouslyWithGestureRecognizer:(UIGestureRecognizer *)b { return YES; }
-- (void)open:(UILongPressGestureRecognizer *)gesture {
-    if (gesture.state!=UIGestureRecognizerStateBegan || !RIPref(RI_DOWNLOAD,YES)) return;
-    static NSTimeInterval lastOpen=0; NSTimeInterval now=NSProcessInfo.processInfo.systemUptime;
-    if (now-lastOpen<1) return; lastOpen=now;
-    UIViewController *host=RITopController(nil);
-    if (!host || [host isKindOfClass:UIAlertController.class]) return;
-    NSDictionary *resolved=RIFindMedia(gesture.view); NSArray<NSDictionary *> *items=resolved[@"items"];
-    if (!items.count) {
-        RILog(@"No media resolved from %@",NSStringFromClass(gesture.view.class));
-        RIAlert(@"RiseInsta",@"تعذر العثور على الوسائط في هذا العرض. انسخ تقرير التشخيص وأرفق رقم إصدار إنستغرام.",host); return;
+        if ([object isKindOfClass:UIViewController.class]) {
+            for (UIViewController *child in ((UIViewController *)object).childViewControllers)
+                if (child.viewIfLoaded.window && queue.count<192) [queue addObject:child];
+        }
     }
-    UIAlertController *menu=[UIAlertController alertControllerWithTitle:@"RiseInsta" message:nil preferredStyle:UIAlertControllerStyleActionSheet];
+    RILog(@"No media in reference paths. Classes: %@",[classes componentsJoinedByString:@", "]);
+    return nil;
+}
+
+static NSDictionary *RIFindVisibleMedia(UIViewController *host) {
+    NSDictionary *result=RIFindMedia(host.view,host); if (result) return result;
+    NSMutableArray<UIView *> *views=[NSMutableArray arrayWithObject:host.view];
+    NSUInteger budget=0;
+    while (views.count && budget++<256) {
+        UIView *view=views.lastObject; [views removeLastObject];
+        if (view.hidden || view.alpha<0.01 || !view.window) continue;
+        if ([RIMediaViewClasses() containsObject:NSStringFromClass(view.class)]) {
+            result=RIFindMedia(view,host); if (result) return result;
+        }
+        [views addObjectsFromArray:view.subviews];
+    }
+    return nil;
+}
+
+static void RIPresentMedia(NSDictionary *resolved,UIView *anchor,UIViewController *host) {
+    NSArray<NSDictionary *> *items=resolved[@"items"];
+    if (!items.count) {
+        RIAlert(@"RiseInsta",@"لم تُعثر على وسائط عبر مسارات Beegram في هذه الشاشة. انسخ تقرير التشخيص بعد محاولة التحميل.",host); return;
+    }
+    UIAlertController *menu=[UIAlertController alertControllerWithTitle:@"وسائط RiseInsta" message:nil preferredStyle:UIAlertControllerStyleActionSheet];
     [items enumerateObjectsUsingBlock:^(NSDictionary *item,NSUInteger index,BOOL *stop){
-        NSString *suffix=items.count>1 ? [NSString stringWithFormat:@" — %lu",(unsigned long)index+1] : @"";
+        NSUInteger actual=item[@"index"] ? [item[@"index"] unsignedIntegerValue] : index;
+        NSString *suffix=items.count>1 ? [NSString stringWithFormat:@" — %lu",(unsigned long)actual+1] : @"";
         [menu addAction:[UIAlertAction actionWithTitle:[@"تحميل" stringByAppendingString:suffix] style:UIAlertActionStyleDefault handler:^(UIAlertAction *a){ [RIDownloader saveURL:item[@"url"] kind:item[@"kind"] share:NO from:host]; }]];
         [menu addAction:[UIAlertAction actionWithTitle:[@"تحميل ومشاركة" stringByAppendingString:suffix] style:UIAlertActionStyleDefault handler:^(UIAlertAction *a){ [RIDownloader saveURL:item[@"url"] kind:item[@"kind"] share:YES from:host]; }]];
     }];
-    id object=resolved[@"object"], caption=RIField(object,@"caption");
-    if (![caption isKindOfClass:NSString.class]) caption=RIField(caption,@"text");
+    id object=resolved[@"object"], caption=RIReferenceField(object,@"caption");
+    if (![caption isKindOfClass:NSString.class]) caption=RIReferenceField(caption,@"text");
     if ([caption isKindOfClass:NSString.class] && [caption length]) [menu addAction:[UIAlertAction actionWithTitle:@"نسخ الوصف" style:UIAlertActionStyleDefault handler:^(UIAlertAction *a){ UIPasteboard.generalPasteboard.string=caption; }]];
-    id username=RIField(RIField(object,@"user") ?: object,@"username");
+    id username=RIReferenceField(RIReferenceField(object,@"user") ?: object,@"username");
     if ([username isKindOfClass:NSString.class] && [username length]) [menu addAction:[UIAlertAction actionWithTitle:@"نسخ اسم المستخدم" style:UIAlertActionStyleDefault handler:^(UIAlertAction *a){ UIPasteboard.generalPasteboard.string=username; }]];
     [menu addAction:[UIAlertAction actionWithTitle:@"إلغاء" style:UIAlertActionStyleCancel handler:nil]];
-    UIPopoverPresentationController *popover=menu.popoverPresentationController;
-    popover.sourceView=gesture.view; CGPoint point=[gesture locationInView:gesture.view]; popover.sourceRect=CGRectMake(point.x,point.y,1,1);
+    UIView *source=anchor.window ? anchor : host.view;
+    menu.popoverPresentationController.sourceView=source;
+    menu.popoverPresentationController.sourceRect=CGRectMake(CGRectGetMidX(source.bounds),CGRectGetMidY(source.bounds),1,1);
     [host presentViewController:menu animated:YES completion:nil];
 }
+void RIShowCurrentMediaMenu(UIViewController *hint) {
+    dispatch_async(dispatch_get_main_queue(),^{
+        UIViewController *host=RITopController(hint);
+        if (!RIPref(RI_DOWNLOAD,YES)) { RIAlert(@"RiseInsta",@"فعّل قائمة الوسائط من الإعدادات أولًا",host); return; }
+        if (host && ![host isKindOfClass:UIAlertController.class]) RIPresentMedia(RIFindVisibleMedia(host),host.view,host);
+    });
+}
+
+static char RIMediaGestureKey,RIMediaButtonKey;
+@interface RIMediaGesture : NSObject <UIGestureRecognizerDelegate>
+@property(nonatomic,strong) NSHashTable<UIView *> *views;
++ (instancetype)shared;
+@end
+@implementation RIMediaGesture
++ (instancetype)shared {
+    static RIMediaGesture *manager; static dispatch_once_t once;
+    dispatch_once(&once,^{
+        manager=[self new]; manager.views=[NSHashTable weakObjectsHashTable];
+        [NSNotificationCenter.defaultCenter addObserverForName:RISettingsChanged object:nil queue:NSOperationQueue.mainQueue usingBlock:^(NSNotification *note){
+            for (UIView *view in manager.views) {
+                UIButton *button=objc_getAssociatedObject(view,&RIMediaButtonKey);
+                button.hidden=!RIPref(RI_DOWNLOAD,YES);
+            }
+        }];
+    }); return manager;
+}
+- (BOOL)gestureRecognizerShouldBegin:(UIGestureRecognizer *)gesture { return RIPref(RI_DOWNLOAD,YES); }
+- (BOOL)gestureRecognizer:(UIGestureRecognizer *)a shouldRecognizeSimultaneouslyWithGestureRecognizer:(UIGestureRecognizer *)b { return YES; }
+- (void)showFrom:(UIView *)view {
+    if (!RIPref(RI_DOWNLOAD,YES)) return;
+    static NSTimeInterval lastOpen=0; NSTimeInterval now=NSProcessInfo.processInfo.systemUptime;
+    if (now-lastOpen<0.7) return; lastOpen=now;
+    UIViewController *host=RITopController(nil);
+    if (host && ![host isKindOfClass:UIAlertController.class]) RIPresentMedia(RIFindMedia(view,host),view,host);
+}
+- (void)open:(UILongPressGestureRecognizer *)gesture {
+    if (gesture.state==UIGestureRecognizerStateBegan) [self showFrom:gesture.view];
+}
+- (void)tap:(UIButton *)button { [self showFrom:button.superview]; }
 @end
 void RIAttachMediaMenu(UIView *view) {
-    static char key; if (objc_getAssociatedObject(view,&key)) return;
-    UILongPressGestureRecognizer *gesture=[[UILongPressGestureRecognizer alloc] initWithTarget:RIMediaGesture.shared action:@selector(open:)];
-    gesture.numberOfTouchesRequired=2; gesture.minimumPressDuration=0.55; gesture.cancelsTouchesInView=NO; gesture.delegate=RIMediaGesture.shared;
-    view.userInteractionEnabled=YES; [view addGestureRecognizer:gesture];
-    objc_setAssociatedObject(view,&key,gesture,OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    if (!objc_getAssociatedObject(view,&RIMediaGestureKey)) {
+        UILongPressGestureRecognizer *gesture=[[UILongPressGestureRecognizer alloc] initWithTarget:RIMediaGesture.shared action:@selector(open:)];
+        gesture.numberOfTouchesRequired=2; gesture.minimumPressDuration=0.55; gesture.cancelsTouchesInView=NO; gesture.delegate=RIMediaGesture.shared;
+        view.userInteractionEnabled=YES; [view addGestureRecognizer:gesture];
+        objc_setAssociatedObject(view,&RIMediaGestureKey,gesture,OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        [RIMediaGesture.shared.views addObject:view];
+    }
+    // Keep narrow Instagram action bars intact; the gear menu is always an alternative.
+    if (view.bounds.size.width>=120 && view.bounds.size.height>=100 && !objc_getAssociatedObject(view,&RIMediaButtonKey)) {
+        UIButton *button=[UIButton buttonWithType:UIButtonTypeSystem];
+        button.translatesAutoresizingMaskIntoConstraints=NO; button.backgroundColor=UIColor.secondarySystemBackgroundColor;
+        button.layer.cornerRadius=22; button.accessibilityLabel=@"تحميل الوسائط — RiseInsta";
+        [button setImage:[UIImage systemImageNamed:@"arrow.down.circle.fill"] forState:UIControlStateNormal];
+        [button addTarget:RIMediaGesture.shared action:@selector(tap:) forControlEvents:UIControlEventTouchUpInside];
+        objc_setAssociatedObject(view,&RIMediaButtonKey,button,OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        [view addSubview:button];
+        [NSLayoutConstraint activateConstraints:@[
+            [button.widthAnchor constraintEqualToConstant:44],[button.heightAnchor constraintEqualToConstant:44],
+            [button.leadingAnchor constraintEqualToAnchor:view.leadingAnchor constant:8],
+            [button.topAnchor constraintEqualToAnchor:view.topAnchor constant:8]
+        ]];
+    }
+    UIButton *button=objc_getAssociatedObject(view,&RIMediaButtonKey); button.hidden=!RIPref(RI_DOWNLOAD,YES);
 }

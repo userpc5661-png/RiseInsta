@@ -185,6 +185,13 @@ __attribute__((constructor)) static void RIStart(void) {
             RILog(@"RiseInsta 1.2.9 beta loaded; profile menu and native screen recorder active");
             RIInstallMenu(); RIInstallHooks();
             for (NSNumber *seconds in @[@1,@3,@10]) dispatch_after(dispatch_time(DISPATCH_TIME_NOW,(int64_t)(seconds.doubleValue*NSEC_PER_SEC)),dispatch_get_main_queue(),^{ RIInstallMenu(); RIInstallHooks(); });
+            // Some Instagram view classes are lazy-loaded after opening Reels,
+            // Stories or the profile. Re-check periodically while foreground.
+            [NSTimer scheduledTimerWithTimeInterval:8.0 repeats:YES block:^(NSTimer *timer) {
+                if (UIApplication.sharedApplication.applicationState!=UIApplicationStateActive) return;
+                RIInstallMenu();
+                RIInstallHooks();
+            }];
             [NSNotificationCenter.defaultCenter addObserverForName:UIApplicationDidBecomeActiveNotification object:nil queue:NSOperationQueue.mainQueue usingBlock:^(NSNotification *note){ RIInstallMenu(); RIInstallHooks(); }];
         });
     }

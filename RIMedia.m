@@ -107,7 +107,7 @@ void RIShowCurrentMediaMenu(UIViewController *hint) {
     });
 }
 
-static char RIMediaGestureKey,RIMediaButtonKey,RIProfileContextKey,RIStackAxisKey,RIPostUFIStatusKey,RIOriginalFramesKey,RIOriginalParentWidthKey,RIParentStackConfigKey;
+static char RIMediaGestureKey,RIMediaButtonKey,RIMediaButtonSourceKey,RIProfileContextKey,RIStackAxisKey,RIPostUFIStatusKey,RIOriginalFramesKey,RIOriginalParentWidthKey,RIParentStackConfigKey;
 @interface RIMediaGesture : NSObject <UIGestureRecognizerDelegate>
 @property(nonatomic,strong) NSHashTable<UIView *> *views;
 + (instancetype)shared;
@@ -131,12 +131,19 @@ static char RIMediaGestureKey,RIMediaButtonKey,RIProfileContextKey,RIStackAxisKe
     static NSTimeInterval lastOpen=0; NSTimeInterval now=NSProcessInfo.processInfo.systemUptime;
     if (now-lastOpen<0.7) return; lastOpen=now;
     UIViewController *host=RITopController(nil);
-    if (host && ![host isKindOfClass:UIAlertController.class]) RIPresentMedia(RIFindMedia(view,host),view,host);
+    if (host && ![host isKindOfClass:UIAlertController.class]) {
+        NSDictionary *media=RIFindMedia(view,host);
+        if (!media) media=RIFindVisibleMedia(host);
+        RIPresentMedia(media,view,host);
+    }
 }
 - (void)open:(UILongPressGestureRecognizer *)gesture {
     if (gesture.state==UIGestureRecognizerStateBegan) [self showFrom:gesture.view];
 }
-- (void)tap:(UIButton *)button { [self showFrom:button.superview]; }
+- (void)tap:(UIButton *)button {
+    UIView *source=objc_getAssociatedObject(button,&RIMediaButtonSourceKey);
+    [self showFrom:source.window ? source : button.superview];
+}
 - (void)openSettings:(UIButton *)button { RIShowSettings(nil); }
 @end
 static CGFloat RIBtnSize(void) { return 44.0; }
@@ -279,7 +286,9 @@ void RIAttachMediaMenu(UIView *view) {
         button.accessibilityLabel=@"تحميل الوسائط — RiseInsta"; [button setImage:RIDownloadIcon() forState:UIControlStateNormal];
         [button addTarget:RIMediaGesture.shared action:@selector(tap:) forControlEvents:UIControlEventTouchUpInside];
         UIView *parent=post ? (RIActionParent(view) ?: view) : view;
-        objc_setAssociatedObject(view,&RIMediaButtonKey,button,OBJC_ASSOCIATION_RETAIN_NONATOMIC); [parent addSubview:button];
+        objc_setAssociatedObject(view,&RIMediaButtonKey,button,OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        objc_setAssociatedObject(button,&RIMediaButtonSourceKey,view,OBJC_ASSOCIATION_ASSIGN);
+        [parent addSubview:button];
     }
     UIButton *button=objc_getAssociatedObject(view,&RIMediaButtonKey);
     if (button) { button.hidden=!RIPref(RI_DOWNLOAD,YES) || (post&&!RIPref(@"editor_post",YES)) || (reels&&!RIPref(@"editor_reels",YES));
@@ -290,24 +299,35 @@ void RIAttachMediaMenu(UIView *view) {
         }
         else if (reels) {
             CGRect heart=RIHeartFrameInRail(view); CGFloat z=RIBtnSize();
-            if (CGRectIsNull(heart)) { button.hidden=YES; }
-            else {
+            if (CGRectIsNull(heart)) {
+                // Instagram 456 may not provide accessibility names on the rail.
+                // Fall back to a visible position within the rail rather than hiding the button.
+                CGFloat y=MAX(4,MIN(CGRectGetHeight(view.bounds)-z,CGRectGetHeight(view.bounds)*0.32));
+                button.frame=CGRectMake(MAX(0,(CGRectGetWidth(view.bounds)-z)*0.5),y,z,z);
+                RILog(@"Reels heart class not resolved; using safe rail fallback");
+            } else {
                 button.frame=CGRectMake(CGRectGetMidX(heart)-z*0.5,MAX(0,CGRectGetMinY(heart)-z-3),z,z);
                 button.tintColor=UIColor.whiteColor; button.backgroundColor=UIColor.clearColor;
                 [button setImage:[RIDownloadIcon() imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate] forState:UIControlStateNormal];
             }
         }
-        [button setImage:RIDownloadIcon() forState:UIControlStateNormal];
+        if (!button.hidden) [button.superview bringSubviewToFront:button];
     }
     // The reel rail and post UFI are supported; media surfaces keep the gesture-only affordance.
 }
 void RIAttachContextMenuButton(UIView *view) {
-    NSString *name=NSStringFromClass(view.class); BOOL profile=[name containsString:@"IGBadgedNavigationButton"] && [view.accessibilityIdentifier isEqualToString:@"profile-more-button"];
-    if(!profile) return;
+    NSString *name=NSStringFromClass(view.class);
+    BOOL navButton=[name containsString:@"IGBadgedNavigationButton"];
+    NSString *identity=view.accessibilityIdentifier.lowercaseString ?: @"";
+    NSString *label=view.accessibilityLabel.lowercaseString ?: @"";
+    BOOL profile=[identity containsString:@"profile-more"] || [identity containsString:@"profile_menu"] ||
+                 [identity containsString:@"profile-menu"] ||
+                 [label containsString:@"profile options"] || [label containsString:@"خيارات الملف"];
+    if (!navButton || !profile) return;
     UIView *parent=view.superview; if(!parent) return;
     void *assoc=&RIProfileContextKey;
     UIButton *button=objc_getAssociatedObject(parent,assoc);
     if(!button) { button=[UIButton buttonWithType:UIButtonTypeSystem]; [button setImage:[UIImage systemImageNamed:@"line.3.horizontal"] forState:UIControlStateNormal]; button.accessibilityLabel=@"قائمة RiseInsta"; [button addTarget:RIMediaGesture.shared action:@selector(openSettings:) forControlEvents:UIControlEventTouchUpInside]; [parent addSubview:button]; objc_setAssociatedObject(parent,assoc,button,OBJC_ASSOCIATION_RETAIN_NONATOMIC); }
     CGFloat s=40; button.frame=CGRectMake(MAX(0,CGRectGetMinX(view.frame)-s-4),CGRectGetMinY(view.frame)+2,s,s); button.tintColor=UIColor.labelColor;
-    button.hidden=NO;
+    button.hidden=NO; button.userInteractionEnabled=YES; [parent bringSubviewToFront:button];
 }

@@ -1,9 +1,0 @@
-Package: com.riseinsta.tweak
-Name: RiseInsta
-Version: 1.0.0
-Architecture: iphoneos-arm
-Description: Instagram enhancement tweak — ghost mode, ad removal, media download.
-Maintainer: Mohammed
-Author: Mohammed
-Section: Tweaks
-Depends: mobilesubstrate

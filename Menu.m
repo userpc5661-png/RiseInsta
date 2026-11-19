@@ -96,32 +96,35 @@ static void RICopyInterfaceReport(UIViewController *host) {
 @end
 
 static NSArray<NSDictionary *> *RIMenuPages(void) {
+    // Native, compact Instagram-like categories; the existing actions remain in their pages.
     return @[
-        @{@"id":@"privacy",@"title":@"الخصوصية",@"detail":@"الظهور والقراءة ومؤشرات النشاط",@"icon":@"hand.raised"},
-        @{@"id":@"messages",@"title":@"الرسائل والوسائط الصوتية",@"detail":@"القراءة والكتابة والوسائط",@"icon":@"bubble.left.and.bubble.right"},
-        @{@"id":@"stories",@"title":@"القصص",@"detail":@"المشاهدة والتنزيل",@"icon":@"circle.dashed"},
-        @{@"id":@"posts",@"title":@"المنشورات والريلز",@"detail":@"التنزيل وأزرار التفاعل",@"icon":@"play.rectangle"},
-        @{@"id":@"profile",@"title":@"الملف الشخصي",@"detail":@"تنزيل صورة الملف الشخصي",@"icon":@"person.crop.circle"},
-        @{@"id":@"comments",@"title":@"التعليقات والتفاعل",@"detail":@"البحث والفرز ونسخ التعليقات",@"icon":@"bubble.left.and.text.bubble.right"},
-        @{@"id":@"calls",@"title":@"المكالمات والصوتيات",@"detail":@"أدوات المكالمات والرسائل الصوتية",@"icon":@"phone.arrow.up.right"},
-        @{@"id":@"ai",@"title":@"Rise AI",@"detail":@"الردود الذكية والمساعد والتخصيص",@"icon":@"sparkles"},
-        @{@"id":@"appearance",@"title":@"المظهر والأزرار",@"detail":@"إظهار أزرار التنزيل",@"icon":@"slider.horizontal.3"},
-        @{@"id":@"media",@"title":@"التحميلات والوسائط",@"detail":@"الحفظ والمشاركة وإدارة التنزيلات",@"icon":@"arrow.down.circle"},
-        @{@"id":@"account_features",@"title":@"ميزات الحساب والتحديثات",@"detail":@"كتالوج الميزات وحالة توفرها",@"icon":@"sparkles.rectangle.stack"},
-        @{@"id":@"diagnostics",@"title":@"التشخيص والصيانة",@"detail":@"تقارير الواجهة وحالة المكتبة",@"icon":@"stethoscope"},
-        @{@"id":@"developer",@"title":@"خيارات المطوّر",@"detail":@"فتح الخيارات الداخلية المتاحة في إنستغرام",@"icon":@"hammer"}
+        @{@"id":@"media",@"title":@"التحميلات والوسائط",@"detail":@"حفظ ومشاركة الصور والفيديو",@"icon":@"arrow.down.circle"},
+        @{@"id":@"privacy",@"title":@"الخصوصية ووضع الشبح",@"detail":@"القراءة والظهور ومؤشرات النشاط",@"icon":@"hand.raised"},
+        @{@"id":@"messages",@"title":@"الرسائل والصوتيات",@"detail":@"الرسائل والوسائط الصوتية",@"icon":@"message"},
+        @{@"id":@"reels_stories",@"title":@"الريلز والستوري",@"detail":@"التنزيل والتشغيل والقصص",@"icon":@"play.rectangle"},
+        @{@"id":@"comments",@"title":@"التعليقات والتفاعل",@"detail":@"البحث والفرز والنسخ",@"icon":@"text.bubble"},
+        @{@"id":@"profile",@"title":@"أدوات البروفايل",@"detail":@"الصورة الشخصية وأدوات الحساب",@"icon":@"person.crop.circle"},
+        @{@"id":@"calls",@"title":@"المكالمات",@"detail":@"الصوت والتسجيلات",@"icon":@"phone"},
+        @{@"id":@"ai",@"title":@"Rise AI",@"detail":@"المساعد والردود الذكية",@"icon":@"sparkles"},
+        @{@"id":@"appearance",@"title":@"التخصيص والمظهر",@"detail":@"خيارات الأزرار والمظهر",@"icon":@"paintpalette"},
+        @{@"id":@"account_features",@"title":@"مميزات وتحديثات الحساب",@"detail":@"كتالوج وفحص الميزات المحلية",@"icon":@"square.stack.3d.up"},
+        @{@"id":@"developer",@"title":@"وضع المطور والموظف",@"detail":@"التشخيص والأدوات الداخلية المتاحة",@"icon":@"chevron.left.forwardslash.chevron.right"},
+        @{@"id":@"diagnostics",@"title":@"التشخيص واستخراج الكلاسات",@"detail":@"فحص الواجهات ومسارات التشغيل",@"icon":@"waveform.path.ecg"}
     ];
 }
 
 @implementation RISettingsController
 - (instancetype)initWithPage:(NSString *)page backgroundColor:(UIColor *)backgroundColor {
-    self=[super initWithStyle:UITableViewStylePlain];
+    self=[super initWithStyle:UITableViewStyleInsetGrouped];
     if (self) { _page=[page copy] ?: @"home"; _menuBackgroundColor=backgroundColor ?: UIColor.systemBackgroundColor; }
     return self;
 }
 - (void)viewDidLoad {
     [super viewDidLoad]; self.title=[self titleForPage]; self.navigationItem.rightBarButtonItem=[[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemDone target:self action:@selector(close)];
-    self.tableView.rowHeight=UITableViewAutomaticDimension; self.tableView.estimatedRowHeight=56; self.view.semanticContentAttribute=UISemanticContentAttributeForceRightToLeft;
+    self.tableView.rowHeight=UITableViewAutomaticDimension;
+    self.tableView.estimatedRowHeight=60;
+    self.tableView.showsVerticalScrollIndicator=YES;
+    self.tableView.alwaysBounceVertical=YES; self.view.semanticContentAttribute=UISemanticContentAttributeForceRightToLeft;
     self.view.backgroundColor=self.menuBackgroundColor; self.tableView.backgroundColor=self.menuBackgroundColor;
     self.tableView.separatorColor=[UIColor.separatorColor colorWithAlphaComponent:0.28]; self.tableView.separatorInset=UIEdgeInsetsMake(0,62,0,18); self.navigationController.navigationBar.tintColor=UIColor.labelColor;
     if (@available(iOS 13.0,*)) {
@@ -141,6 +144,13 @@ static NSArray<NSDictionary *> *RIMenuPages(void) {
     if ([self.page isEqualToString:@"privacy"]) return @[@{@"feature":@2},@{@"feature":@3},@{@"target_toggle":@"priv_switch",@"title":@"إخفاء قوائم المتابعين والمتابَعين",@"detail":@"مفتاح RiseInsta محلي تجريبي؛ لا يغير إخفاء القوائم على الخادم.",@"icon":@"person.2.slash"}];
     if ([self.page isEqualToString:@"developer"]) return @[@{@"action":@"feature_probe",@"title":@"فحص كلاسات وإعدادات المطوّر",@"detail":@"استخراج أسماء الكلاسات والـselectors المتاحة في نسخة إنستغرام الحالية",@"icon":@"hammer"},@{@"action":@"interface",@"title":@"فحص واجهة القائمة الداخلية",@"detail":@"افتح قائمة الهز الأصلية أولًا، ثم انسخ شجرة الواجهة",@"icon":@"rectangle.3.group"},@{@"target_toggle":@"meta_employee_enabled",@"title":@"مفتاح تجربة المطوّر المحلي",@"detail":@"تفضيل محلي تجريبي فقط؛ لا يمنح صفة موظف أو صلاحيات Meta",@"icon":@"switch.2"},@{@"info":@YES,@"title":@"Internal Settings / Dogfooding Assistant",@"detail":@"فتح الأدوات الأصلية يتطلب تحديد نقطة الربط الفعلية؛ لا يتم تجاوز أهلية الحساب."}];
     if ([self.page isEqualToString:@"messages"]) return @[@{@"feature":@0},@{@"feature":@1}];
+    if ([self.page isEqualToString:@"reels_stories"]) return @[
+        @{@"feature":@2},
+        @{@"feature":@3},
+        @{@"feature":@4},
+        @{@"editor":@1,@"title":@"إظهار زر تحميل الريلز",@"icon":@"play.rectangle"},
+        @{@"action":@"open_media",@"title":@"خيارات تحميل الوسائط الحالية",@"detail":@"تحميل أو مشاركة العنصر المعروض",@"icon":@"arrow.down.circle"}
+    ];
     if ([self.page isEqualToString:@"stories"]) return @[@{@"feature":@2},@{@"feature":@3},@{@"feature":@4}];
     if ([self.page isEqualToString:@"posts"]) return @[@{@"feature":@3},@{@"feature":@4}];
     if ([self.page isEqualToString:@"media"]) return @[@{@"action":@"open_media",@"title":@"تحميل الوسائط الظاهرة",@"detail":@"خيارات العنصر الحالي فقط",@"icon":@"arrow.down.to.line"},@{@"feature":@5},@{@"action":@"screen_record",@"title":RIScreenRecorderIsRecording()?@"إيقاف تسجيل الشاشة":@"بدء تسجيل الشاشة",@"detail":@"يسجل شاشة التطبيق؛ لا يسجل صوت المكالمات",@"icon":RIScreenRecorderIsRecording()?@"stop.circle":@"record.circle"},@{@"action":@"cancel",@"title":@"إلغاء التحميلات الجارية",@"icon":@"xmark.circle"}];
@@ -177,10 +187,15 @@ static NSArray<NSDictionary *> *RIMenuPages(void) {
 }
 - (UITableViewCell *)tableView:(UITableView *)t cellForRowAtIndexPath:(NSIndexPath *)ip {
     NSDictionary *row=self.rows[ip.row]; UITableViewCell *cell=[[UITableViewCell alloc] initWithStyle:UITableViewCellStyleSubtitle reuseIdentifier:nil];
-    cell.textLabel.numberOfLines=0; cell.detailTextLabel.numberOfLines=0; cell.backgroundColor=self.menuBackgroundColor;
+    cell.textLabel.numberOfLines=1;
+    cell.detailTextLabel.numberOfLines=[self.page isEqualToString:@"home"] ? 1 : 0;
+    cell.textLabel.font=[UIFont systemFontOfSize:15 weight:UIFontWeightMedium];
+    cell.detailTextLabel.font=[UIFont systemFontOfSize:12];
+    cell.detailTextLabel.textColor=UIColor.secondaryLabelColor;
+    cell.backgroundColor=self.menuBackgroundColor;
     NSString *symbol=row[@"icon"];
     if (row[@"target_toggle"]) {
-        NSString *key=row[@"target_toggle"]; cell.textLabel.text=row[@"title"]; cell.detailTextLabel.text=row[@"detail"]; cell.imageView.image=[UIImage systemImageNamed:row[@"icon"]]; cell.imageView.tintColor=UIColor.systemBlueColor;
+        NSString *key=row[@"target_toggle"]; cell.textLabel.text=row[@"title"]; cell.detailTextLabel.text=row[@"detail"]; cell.imageView.image=[UIImage systemImageNamed:row[@"icon"]]; cell.imageView.tintColor=UIColor.labelColor;
         UISwitch *sw=[UISwitch new]; sw.on=[NSUserDefaults.standardUserDefaults boolForKey:key]; sw.accessibilityIdentifier=key; [sw addTarget:self action:@selector(targetToggle:) forControlEvents:UIControlEventValueChanged]; cell.accessoryView=sw; cell.selectionStyle=UITableViewCellSelectionStyleNone;
     } else if (row[@"feature"]) {
         NSUInteger index=[row[@"feature"] unsignedIntegerValue]; NSDictionary *feature=RIFeatures()[index]; cell.textLabel.text=feature[@"title"]; cell.detailTextLabel.text=feature[@"detail"]; cell.imageView.image=[UIImage systemImageNamed:feature[@"icon"]]; cell.imageView.tintColor=UIColor.systemBlueColor;
@@ -227,9 +242,11 @@ void RIShowSettings(UIViewController *host) {
         nav.modalPresentationStyle=UIModalPresentationPageSheet;
         if (@available(iOS 15.0,*)) {
             UISheetPresentationController *sheet=nav.sheetPresentationController;
-            sheet.detents=@[UISheetPresentationControllerDetent.mediumDetent,UISheetPresentationControllerDetent.largeDetent];
-            sheet.prefersGrabberVisible=YES;
-            sheet.prefersScrollingExpandsWhenScrolledToEdge=YES;
+            // Only medium: swiping up scrolls the table, never expands the sheet.
+            sheet.detents=@[UISheetPresentationControllerDetent.mediumDetent];
+            sheet.selectedDetentIdentifier=UISheetPresentationControllerDetentIdentifierMedium;
+            sheet.prefersGrabberVisible=NO;
+            sheet.prefersScrollingExpandsWhenScrolledToEdge=NO;
         }
         if (@available(iOS 13.0,*)) nav.overrideUserInterfaceStyle=top.traitCollection.userInterfaceStyle;
         [top presentViewController:nav animated:YES completion:nil];

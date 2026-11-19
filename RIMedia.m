@@ -107,7 +107,7 @@ void RIShowCurrentMediaMenu(UIViewController *hint) {
     });
 }
 
-static char RIMediaGestureKey,RIMediaButtonKey,RIMediaButtonSourceKey,RIProfileContextKey,RIStackAxisKey,RIPostUFIStatusKey,RIOriginalFramesKey,RIOriginalParentWidthKey,RIParentStackConfigKey;
+static char RIMediaGestureKey,RIMediaButtonKey,RIMediaButtonSourceKey,RIProfileContextKey;
 @interface RIMediaGesture : NSObject <UIGestureRecognizerDelegate>
 @property(nonatomic,strong) NSHashTable<UIView *> *views;
 + (instancetype)shared;
@@ -144,132 +144,63 @@ static char RIMediaGestureKey,RIMediaButtonKey,RIMediaButtonSourceKey,RIProfileC
     UIView *source=objc_getAssociatedObject(button,&RIMediaButtonSourceKey);
     [self showFrom:source.window ? source : button.superview];
 }
-- (void)openSettings:(UIButton *)button { RIShowSettings(nil); }
+- (void)openProfileSettings:(UILongPressGestureRecognizer *)gesture {
+    if (gesture.state==UIGestureRecognizerStateBegan) RIShowSettings(nil);
+}
 @end
-static CGFloat RIBtnSize(void) { return 44.0; }
-static void RITree(UIView *root, NSMutableArray<UIView *> *out, NSUInteger *budget);
-static BOOL RITextContainsAny(NSString *text, NSArray<NSString *> *terms) {
-    NSString *value=text.lowercaseString;
-    for (NSString *term in terms) if ([value containsString:term]) return YES;
+// RiseInsta-owned controls must never resize/reorder Instagram's native controls.
+// A button is shown only when its entire tap area has an unused slot.
+static BOOL RINativeControlOverlaps(UIView *root, CGRect candidate, UIButton *ours) {
+    NSMutableArray<UIView *> *pending=[NSMutableArray arrayWithObject:root];
+    NSUInteger scanned=0;
+    while (pending.count && scanned++<350) {
+        UIView *v=pending.lastObject; [pending removeLastObject];
+        if (v==ours || v.hidden || v.alpha<0.05) continue;
+        BOOL nativeAction=([v isKindOfClass:UIControl.class] && v!=root) ||
+            [NSStringFromClass(v.class) containsString:@"IGUFIButtonWithCountsView"];
+        if (nativeAction && CGRectGetWidth(v.bounds)>8 && CGRectGetHeight(v.bounds)>8) {
+            CGRect frame=[v convertRect:v.bounds toView:root];
+            if (CGRectIntersectsRect(CGRectInset(candidate,-3,-3),frame)) return YES;
+        }
+        [pending addObjectsFromArray:v.subviews];
+    }
     return NO;
 }
-static CGRect RIHeartFrameInRail(UIView *rail) {
-    NSMutableArray<UIView *> *tree=[NSMutableArray array]; NSUInteger budget=0; RITree(rail,tree,&budget);
-    NSArray<NSString *> *terms=@[@"like",@"heart",@"reaction",@"أعجب",@"إعجاب"];
-    for (UIView *candidate in tree) {
-        if (![candidate isKindOfClass:UIControl.class]) continue;
-        UIControl *control=(UIControl *)candidate;
-        BOOL match=RITextContainsAny(control.accessibilityLabel ?: @"",terms) || RITextContainsAny(control.accessibilityIdentifier ?: @"",terms);
-        if (!match) for (id target in control.allTargets) for (NSString *action in [control actionsForTarget:target forControlEvent:UIControlEventAllEvents])
-            if (RITextContainsAny(action,terms)) { match=YES; break; }
-        if (match && CGRectGetWidth(control.bounds)>8 && CGRectGetHeight(control.bounds)>8) return [control convertRect:control.bounds toView:rail];
-    }
-    return CGRectNull;
-}
-static void RITree(UIView *root, NSMutableArray<UIView *> *out, NSUInteger *budget) {
-    if (!root || *budget>=250) return; (*budget)++; [out addObject:root];
-    for (UIView *child in root.subviews) RITree(child,out,budget);
-}
-static NSArray<UIView *> *RIUFIActionItems(UIView *parent) {
-    NSMutableArray<UIView *> *items=[NSMutableArray array];
-    for (UIView *child in parent.subviews)
-        if ([NSStringFromClass(child.class) containsString:@"IGUFIButtonWithCountsView"]) [items addObject:child];
-    return items;
-}
-static UIView *RIActionParent(UIView *root) {
-    NSMutableArray<UIView *> *tree=[NSMutableArray array]; NSUInteger budget=0; RITree(root,tree,&budget);
-    NSMutableDictionary<NSValue *,NSMutableArray<UIView *> *> *groups=[NSMutableDictionary dictionary];
-    for (UIView *candidate in tree) {
-        if (![NSStringFromClass(candidate.class) containsString:@"IGUFIButtonWithCountsView"] || !candidate.superview) continue;
-        NSValue *key=[NSValue valueWithNonretainedObject:candidate.superview];
-        if (!groups[key]) groups[key]=[NSMutableArray array]; [groups[key] addObject:candidate];
-    }
-    UIView *best=nil; NSUInteger count=0;
-    for (NSValue *key in groups) if (groups[key].count>count) { best=key.nonretainedObjectValue; count=groups[key].count; }
-    return count>=3 ? best : nil;
-}
-static NSUInteger RIVerticalizeCountStack(UIView *item, BOOL enabled) {
-    NSMutableArray<UIView *> *tree=[NSMutableArray array]; NSUInteger budget=0; RITree(item,tree,&budget);
-    NSUInteger matched=0;
-    for (UIView *view in tree) if ([view isKindOfClass:UIStackView.class]) {
-        UIStackView *stack=(UIStackView *)view; BOOL hasIcon=NO,hasLabel=NO;
-        for (UIView *child in stack.arrangedSubviews) {
-            NSMutableArray<UIView *> *subtree=[NSMutableArray array]; NSUInteger childBudget=0; RITree(child,subtree,&childBudget);
-            for (UIView *part in subtree) { if ([part isKindOfClass:UIImageView.class]) hasIcon=YES; if ([part isKindOfClass:UILabel.class]) hasLabel=YES; }
+static void RIPositionDownloadButton(UIView *view, UIButton *button, BOOL reels) {
+    if (!view || !button) return;
+    BOOL enabled=RIPref(RI_DOWNLOAD,YES) &&
+        RIPref(reels ? @"editor_reels" : @"editor_post",YES);
+    button.hidden=YES;
+    if (!enabled || CGRectGetWidth(view.bounds)<40 || CGRectGetHeight(view.bounds)<36) return;
+    // Discover an empty slot from actual on-screen controls, not assumptions
+    // about the last Instagram button being Save or Like.
+    CGFloat width=CGRectGetWidth(view.bounds);
+    CGFloat height=CGRectGetHeight(view.bounds);
+    CGFloat size=reels?40.0:34.0;
+    CGRect selected=CGRectNull;
+    if (reels) {
+        CGFloat x=(width-size)*0.5;
+        for (CGFloat y=4;y+size<=height-2;y+=8) {
+            CGRect slot=CGRectMake(x,y,size,size);
+            if (!RINativeControlOverlaps(view,slot,button)) { selected=slot; break; }
         }
-        if (!hasIcon || !hasLabel) continue;
-        matched++;
-        NSDictionary *original=objc_getAssociatedObject(stack,&RIStackAxisKey);
-        if (!original) { original=@{@"axis":@(stack.axis),@"alignment":@(stack.alignment),@"spacing":@(stack.spacing)}; objc_setAssociatedObject(stack,&RIStackAxisKey,original,OBJC_ASSOCIATION_RETAIN_NONATOMIC); }
-        stack.axis=enabled ? UILayoutConstraintAxisVertical : (UILayoutConstraintAxis)[original[@"axis"] integerValue];
-        if (enabled) { stack.alignment=UIStackViewAlignmentCenter; stack.spacing=1.0; }
-        else { stack.alignment=(UIStackViewAlignment)[original[@"alignment"] integerValue]; stack.spacing=[original[@"spacing"] doubleValue]; }
-    }
-    return matched;
-}
-static void RILayoutPostActions(UIView *root, UIView *parent, UIButton *download) {
-    NSArray<UIView *> *items=RIUFIActionItems(parent); if (items.count<3 || !parent.bounds.size.width) { download.hidden=YES; return; }
-    NSMutableDictionary<NSValue *,NSValue *> *originalFrames=objc_getAssociatedObject(parent,&RIOriginalFramesKey);
-    NSNumber *storedWidth=objc_getAssociatedObject(parent,&RIOriginalParentWidthKey);
-    if (!originalFrames || !storedWidth) {
-        originalFrames=[NSMutableDictionary dictionary];
-        for (UIView *item in items) originalFrames[[NSValue valueWithNonretainedObject:item]]=[NSValue valueWithCGRect:item.frame];
-        storedWidth=@(CGRectGetWidth(parent.bounds));
-        objc_setAssociatedObject(parent,&RIOriginalFramesKey,originalFrames,OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-        objc_setAssociatedObject(parent,&RIOriginalParentWidthKey,storedWidth,OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-    }
-    BOOL layoutEnabled=RIPref(@"editor_post",YES);
-    BOOL downloadEnabled=layoutEnabled && RIPref(RI_DOWNLOAD,YES);
-    NSMutableArray<UIView *> *ordered=[items mutableCopy];
-    [ordered sortUsingComparator:^NSComparisonResult(UIView *a,UIView *b){ return CGRectGetMinX(a.frame)<CGRectGetMinX(b.frame)?NSOrderedAscending:(CGRectGetMinX(a.frame)>CGRectGetMinX(b.frame)?NSOrderedDescending:NSOrderedSame); }];
-    // Keep Instagram's native save action untouched; insert download immediately before the trailing native action.
-    UIView *save=ordered.lastObject;
-    NSUInteger countStacks=0; for (UIView *item in ordered) countStacks+=RIVerticalizeCountStack(item,layoutEnabled);
-    if (!objc_getAssociatedObject(root,&RIPostUFIStatusKey)) {
-        objc_setAssociatedObject(root,&RIPostUFIStatusKey,@YES,OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-        RILog(@"Post UFI integration: nativeCells=%lu countStacksMatched=%lu vertical=%d",(unsigned long)items.count,(unsigned long)countStacks,layoutEnabled);
-    }
-    if ([parent isKindOfClass:UIStackView.class]) {
-        UIStackView *stack=(UIStackView *)parent;
-        NSDictionary *config=objc_getAssociatedObject(stack,&RIParentStackConfigKey);
-        if (downloadEnabled && !config) {
-            config=@{@"axis":@(stack.axis),@"alignment":@(stack.alignment),@"distribution":@(stack.distribution),@"spacing":@(stack.spacing)};
-            objc_setAssociatedObject(stack,&RIParentStackConfigKey,config,OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    } else {
+        for (CGFloat x=width-size-2;x>=2;x-=6) {
+            CGRect slot=CGRectMake(x,(height-size)*0.5,size,size);
+            if (!RINativeControlOverlaps(view,slot,button)) { selected=slot; break; }
         }
-        if (!downloadEnabled) {
-            if ([stack.arrangedSubviews containsObject:download]) { [stack removeArrangedSubview:download]; [download removeFromSuperview]; }
-            if (config) { stack.axis=(UILayoutConstraintAxis)[config[@"axis"] integerValue]; stack.alignment=(UIStackViewAlignment)[config[@"alignment"] integerValue]; stack.distribution=(UIStackViewDistribution)[config[@"distribution"] integerValue]; stack.spacing=[config[@"spacing"] doubleValue]; }
-            download.hidden=YES; return;
-        }
-        NSUInteger insertIndex=[ordered indexOfObject:save];
-        if (![stack.arrangedSubviews containsObject:download]) [stack insertArrangedSubview:download atIndex:MIN(insertIndex,stack.arrangedSubviews.count)];
-        stack.axis=UILayoutConstraintAxisHorizontal; stack.alignment=UIStackViewAlignmentFill; stack.distribution=UIStackViewDistributionFillEqually;
-        download.hidden=NO; download.tintColor=UIColor.whiteColor;
-        [download setImage:[RIDownloadIcon() imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate] forState:UIControlStateNormal];
-        download.contentHorizontalAlignment=UIControlContentHorizontalAlignmentCenter; download.contentVerticalAlignment=UIControlContentVerticalAlignmentCenter; download.imageView.contentMode=UIViewContentModeScaleAspectFit;
+    }
+    if (CGRectIsNull(selected)) {
+        // Preserve Instagram buttons; the existing long-press download remains.
         return;
     }
-    if (!layoutEnabled) {
-        CGFloat scale=CGRectGetWidth(parent.bounds)/MAX(1.0,storedWidth.doubleValue),height=CGRectGetHeight(parent.bounds);
-        for (UIView *item in items) {
-            CGRect frame=[originalFrames[[NSValue valueWithNonretainedObject:item]] CGRectValue];
-            frame.origin.x*=scale; frame.size.width*=scale; frame.size.height=height; item.frame=frame;
-        }
-        download.hidden=YES; return;
-    }
-    if (downloadEnabled) { NSUInteger saveIndex=[ordered indexOfObject:save]; [ordered insertObject:download atIndex:saveIndex]; }
-    CGFloat width=CGRectGetWidth(parent.bounds)/(CGFloat)ordered.count, height=CGRectGetHeight(parent.bounds);
-    for (NSUInteger i=0;i<ordered.count;i++) {
-        UIView *item=ordered[i]; item.frame=CGRectMake((CGFloat)i*width,0,width,height);
-        if (item==download) {
-            download.hidden=NO; download.tintColor=UIColor.whiteColor;
-            [download setImage:[RIDownloadIcon() imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate] forState:UIControlStateNormal];
-            download.contentHorizontalAlignment=UIControlContentHorizontalAlignmentCenter; download.contentVerticalAlignment=UIControlContentVerticalAlignmentCenter;
-            download.imageView.contentMode=UIViewContentModeScaleAspectFit;
-            download.accessibilityLabel=@"تحميل الوسائط — RiseInsta";
-        } else { item.clipsToBounds=NO; [item setNeedsLayout]; }
-    }
-    if (!downloadEnabled) download.hidden=YES;
+    button.frame=selected;
+    button.tintColor=UIColor.labelColor;
+    button.accessibilityLabel=@"تحميل الوسائط — RiseInsta";
+    [button setImage:[RIDownloadIcon() imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate]
+           forState:UIControlStateNormal];
+    button.hidden=NO;
+    [view bringSubviewToFront:button];
 }
 void RIAttachMediaMenu(UIView *view) {
     NSString *viewName=NSStringFromClass(view.class); BOOL story=[viewName containsString:@"Story"]; BOOL profile=[viewName containsString:@"ProfilePicture"];
@@ -279,66 +210,42 @@ void RIAttachMediaMenu(UIView *view) {
         view.userInteractionEnabled=YES; [view addGestureRecognizer:gesture];
         objc_setAssociatedObject(view,&RIMediaGestureKey,gesture,OBJC_ASSOCIATION_RETAIN_NONATOMIC); [RIMediaGesture.shared.views addObject:view];
     }
-    NSString *name=NSStringFromClass(view.class); BOOL post=[name isEqualToString:@"IGUFIInteractionCountsView"];
+    NSString *name=NSStringFromClass(view.class);
+    BOOL post=[name isEqualToString:@"IGUFIInteractionCountsView"];
     BOOL reels=[name containsString:@"IGSundialViewerVerticalUFI"];
-    if ((post || (reels && RIPref(@"editor_reels",YES))) && !objc_getAssociatedObject(view,&RIMediaButtonKey)) {
-        UIButton *button=[UIButton buttonWithType:UIButtonTypeSystem]; button.tag=7102; button.backgroundColor=UIColor.clearColor;
-        button.accessibilityLabel=@"تحميل الوسائط — RiseInsta"; [button setImage:RIDownloadIcon() forState:UIControlStateNormal];
-        [button addTarget:RIMediaGesture.shared action:@selector(tap:) forControlEvents:UIControlEventTouchUpInside];
-        UIView *parent=post ? (RIActionParent(view) ?: view) : view;
+    if (!(post || reels)) return;
+    UIButton *button=objc_getAssociatedObject(view,&RIMediaButtonKey);
+    if (!button) {
+        button=[UIButton buttonWithType:UIButtonTypeSystem];
+        button.tag=7102;
+        button.backgroundColor=UIColor.clearColor;
+        [button addTarget:RIMediaGesture.shared action:@selector(tap:)
+         forControlEvents:UIControlEventTouchUpInside];
         objc_setAssociatedObject(view,&RIMediaButtonKey,button,OBJC_ASSOCIATION_RETAIN_NONATOMIC);
         objc_setAssociatedObject(button,&RIMediaButtonSourceKey,view,OBJC_ASSOCIATION_ASSIGN);
-        [parent addSubview:button];
+        [view addSubview:button];
     }
-    UIButton *button=objc_getAssociatedObject(view,&RIMediaButtonKey);
-    if (button) { button.hidden=!RIPref(RI_DOWNLOAD,YES) || (post&&!RIPref(@"editor_post",YES)) || (reels&&!RIPref(@"editor_reels",YES));
-        if(post) {
-            UIView *parent=RIActionParent(view);
-            if (!parent) {
-                // Keep a reliable fallback until the exact UFI structure is
-                // confirmed by an Instagram 456 view-hierarchy report.
-                if (button.superview!=view) { [button removeFromSuperview]; [view addSubview:button]; }
-                CGFloat z=36;
-                button.frame=CGRectMake(MAX(0,CGRectGetWidth(view.bounds)-z-6),2,z,z);
-                button.hidden=!RIPref(RI_DOWNLOAD,YES) || !RIPref(@"editor_post",YES);
-                button.tintColor=UIColor.whiteColor;
-                RILog(@"Post actions class layout not resolved; showing fallback download button");
-            } else {
-                if (button.superview!=parent) { [button removeFromSuperview]; [parent addSubview:button]; }
-                RILayoutPostActions(view,parent,button);
-            }
-        }
-        else if (reels) {
-            CGRect heart=RIHeartFrameInRail(view); CGFloat z=RIBtnSize();
-            if (CGRectIsNull(heart)) {
-                // Instagram 456 may not provide accessibility names on the rail.
-                // Fall back to a visible position within the rail rather than hiding the button.
-                CGFloat y=MAX(4,MIN(CGRectGetHeight(view.bounds)-z,CGRectGetHeight(view.bounds)*0.32));
-                button.frame=CGRectMake(MAX(0,(CGRectGetWidth(view.bounds)-z)*0.5),y,z,z);
-                RILog(@"Reels heart class not resolved; using safe rail fallback");
-            } else {
-                button.frame=CGRectMake(CGRectGetMidX(heart)-z*0.5,MAX(0,CGRectGetMinY(heart)-z-3),z,z);
-                button.tintColor=UIColor.whiteColor; button.backgroundColor=UIColor.clearColor;
-                [button setImage:[RIDownloadIcon() imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate] forState:UIControlStateNormal];
-            }
-        }
-        if (!button.hidden) [button.superview bringSubviewToFront:button];
-    }
-    // The reel rail and post UFI are supported; media surfaces keep the gesture-only affordance.
+    if (button.superview!=view) { [button removeFromSuperview]; [view addSubview:button]; }
+    RIPositionDownloadButton(view,button,reels);
 }
+// Reuse Instagram's own profile More control instead of placing a second
+// floating button that can overlap its native hit target.
 void RIAttachContextMenuButton(UIView *view) {
     NSString *name=NSStringFromClass(view.class);
-    BOOL navButton=[name containsString:@"IGBadgedNavigationButton"];
+    if (![name containsString:@"IGBadgedNavigationButton"]) return;
     NSString *identity=view.accessibilityIdentifier.lowercaseString ?: @"";
     NSString *label=view.accessibilityLabel.lowercaseString ?: @"";
-    BOOL profile=[identity containsString:@"profile-more"] || [identity containsString:@"profile_menu"] ||
-                 [identity containsString:@"profile-menu"] ||
-                 [label containsString:@"profile options"] || [label containsString:@"خيارات الملف"];
-    if (!navButton || !profile) return;
-    UIView *parent=view.superview; if(!parent) return;
-    void *assoc=&RIProfileContextKey;
-    UIButton *button=objc_getAssociatedObject(parent,assoc);
-    if(!button) { button=[UIButton buttonWithType:UIButtonTypeSystem]; [button setImage:[UIImage systemImageNamed:@"line.3.horizontal"] forState:UIControlStateNormal]; button.accessibilityLabel=@"قائمة RiseInsta"; [button addTarget:RIMediaGesture.shared action:@selector(openSettings:) forControlEvents:UIControlEventTouchUpInside]; [parent addSubview:button]; objc_setAssociatedObject(parent,assoc,button,OBJC_ASSOCIATION_RETAIN_NONATOMIC); }
-    CGFloat s=40; button.frame=CGRectMake(MAX(0,CGRectGetMinX(view.frame)-s-4),CGRectGetMinY(view.frame)+2,s,s); button.tintColor=UIColor.labelColor;
-    button.hidden=NO; button.userInteractionEnabled=YES; [parent bringSubviewToFront:button];
+    BOOL profile=[identity containsString:@"profile-more"] ||
+        [identity containsString:@"profile_menu"] ||
+        [identity containsString:@"profile-menu"] ||
+        [label containsString:@"profile options"] ||
+        [label containsString:@"خيارات الملف"];
+    if (!profile || objc_getAssociatedObject(view,&RIProfileContextKey)) return;
+    UILongPressGestureRecognizer *hold=[[UILongPressGestureRecognizer alloc]
+        initWithTarget:RIMediaGesture.shared action:@selector(openProfileSettings:)];
+    hold.minimumPressDuration=0.65;
+    hold.cancelsTouchesInView=NO;
+    hold.delegate=RIMediaGesture.shared;
+    [view addGestureRecognizer:hold];
+    objc_setAssociatedObject(view,&RIProfileContextKey,hold,OBJC_ASSOCIATION_RETAIN_NONATOMIC);
 }

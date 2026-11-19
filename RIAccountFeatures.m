@@ -176,8 +176,10 @@ void RIShowAccountFeatures(UIViewController *host) {
         RIAccountFeaturesController *root=[RIAccountFeaturesController new]; UINavigationController *nav=[[UINavigationController alloc] initWithRootViewController:root]; nav.modalPresentationStyle=UIModalPresentationPageSheet;
         if (@available(iOS 15.0,*)) {
             UISheetPresentationController *sheet=nav.sheetPresentationController;
-            sheet.detents=@[UISheetPresentationControllerDetent.largeDetent];
-            sheet.prefersGrabberVisible=YES;
+            sheet.detents=@[UISheetPresentationControllerDetent.mediumDetent];
+            sheet.selectedDetentIdentifier=UISheetPresentationControllerDetentIdentifierMedium;
+            sheet.prefersGrabberVisible=NO;
+            sheet.prefersScrollingExpandsWhenScrolledToEdge=NO;
         }
         nav.overrideUserInterfaceStyle=UIUserInterfaceStyleDark; [top presentViewController:nav animated:YES completion:nil];
     });
